@@ -1,0 +1,54 @@
+name: Refresh pip lock
+
+on:
+  push:
+    branches:
+      - case/controlled-autonomy-lab
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-pip-lock:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: case/controlled-autonomy-lab
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.30"
+          enable-cache: true
+
+      - name: Upgrade vulnerable transitive pip lock
+        run: uv lock --upgrade-package pip
+
+      - name: Verify pip 26.2 or newer is locked
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          lock = Path("uv.lock").read_text(encoding="utf-8")
+          match = re.search(r'\[\[package\]\]\nname = "pip"\nversion = "([^"]+)"', lock)
+          if match is None:
+              raise SystemExit("pip package not found in uv.lock")
+          version = tuple(int(part) for part in match.group(1).split(".")[:3])
+          if version < (26, 2, 0):
+              raise SystemExit(f"expected pip >= 26.2, found {match.group(1)}")
+          print(f"locked pip={match.group(1)}")
+          PY
+
+      - name: Commit regenerated lock if changed
+        run: |
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock already contains a safe pip version"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add uv.lock
+          git commit -m "chore: refresh pip lock to patched release"
+          git push origin HEAD:case/controlled-autonomy-lab
