@@ -5,6 +5,13 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+from harness_example.domain.agent import (
+    AgentMessage,
+    AgentTurn,
+    ToolCall,
+    ToolResult,
+    ToolSpec,
+)
 from harness_example.domain.autonomy import ModelTurn, ModelUsage
 
 _API_HOST = "api.anthropic.com"
@@ -49,7 +56,58 @@ class AnthropicMessagesClient:
         }
         response = self._post(body)
         return ModelTurn(
-            text=self._extract_text(response),
+            text=self._extract_text(response, required=True),
+            usage=self._extract_usage(response),
+            stop_reason=str(response.get("stop_reason") or "unknown"),
+        )
+
+    def next_turn(
+        self,
+        *,
+        system: str,
+        messages: tuple[AgentMessage, ...],
+        tools: tuple[ToolSpec, ...],
+    ) -> AgentTurn:
+        """Execute one Messages API turn with strict client-tool contracts."""
+        body = {
+            "model": self._model,
+            "max_tokens": self._max_tokens,
+            "system": system,
+            "messages": [self._message_to_api(message) for message in messages],
+            "tools": [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": dict(tool.input_schema),
+                    "strict": True,
+                }
+                for tool in tools
+            ],
+            "tool_choice": {"type": "auto"},
+        }
+        response = self._post(body)
+        content = response.get("content")
+        if not isinstance(content, list):
+            raise ModelProviderError("Claude API response is missing content")
+        tool_calls: list[ToolCall] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "tool_use":
+                continue
+            call_id = block.get("id")
+            name = block.get("name")
+            arguments = block.get("input")
+            if not isinstance(call_id, str) or not isinstance(name, str):
+                raise ModelProviderError("Claude API returned malformed tool_use metadata")
+            if not isinstance(arguments, dict):
+                raise ModelProviderError("Claude API returned malformed tool input")
+            tool_calls.append(ToolCall(call_id=call_id, name=name, arguments=arguments))
+        message = AgentMessage(
+            role="assistant",
+            text=self._extract_text(response, required=False),
+            tool_calls=tuple(tool_calls),
+        )
+        return AgentTurn(
+            message=message,
             usage=self._extract_usage(response),
             stop_reason=str(response.get("stop_reason") or "unknown"),
         )
@@ -86,7 +144,7 @@ class AnthropicMessagesClient:
         return decoded
 
     @staticmethod
-    def _extract_text(response: Mapping[str, Any]) -> str:
+    def _extract_text(response: Mapping[str, Any], *, required: bool) -> str:
         content = response.get("content")
         if not isinstance(content, list):
             raise ModelProviderError("Claude API response is missing content")
@@ -96,7 +154,7 @@ class AnthropicMessagesClient:
             if isinstance(block, dict) and block.get("type") == "text"
         ]
         text = "\n".join(chunk for chunk in chunks if isinstance(chunk, str)).strip()
-        if not text:
+        if required and not text:
             raise ModelProviderError("Claude API response did not contain text")
         return text
 
@@ -111,3 +169,37 @@ class AnthropicMessagesClient:
             input_tokens=input_tokens if isinstance(input_tokens, int) else 0,
             output_tokens=output_tokens if isinstance(output_tokens, int) else 0,
         )
+
+    @staticmethod
+    def _message_to_api(message: AgentMessage) -> dict[str, object]:
+        if message.role == "user":
+            return {"role": "user", "content": message.text}
+        if message.role == "assistant":
+            content: list[dict[str, object]] = []
+            if message.text:
+                content.append({"type": "text", "text": message.text})
+            content.extend(
+                {
+                    "type": "tool_use",
+                    "id": call.call_id,
+                    "name": call.name,
+                    "input": dict(call.arguments),
+                }
+                for call in message.tool_calls
+            )
+            return {"role": "assistant", "content": content}
+        return {
+            "role": "user",
+            "content": [AnthropicMessagesClient._tool_result_to_api(result) for result in message.tool_results],
+        }
+
+    @staticmethod
+    def _tool_result_to_api(result: ToolResult) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "type": "tool_result",
+            "tool_use_id": result.call_id,
+            "content": result.content,
+        }
+        if result.is_error:
+            payload["is_error"] = True
+        return payload
