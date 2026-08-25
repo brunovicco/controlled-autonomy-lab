@@ -41,10 +41,11 @@ def _patch_live_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "_build_runner", build_runner)
 
 
-def test_client_from_env_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+def test_client_from_env_requires_selected_provider_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_PROVIDER", "openrouter")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
-    with pytest.raises(SystemExit, match="ANTHROPIC_API_KEY"):
+    with pytest.raises(SystemExit, match="OPENROUTER_API_KEY"):
         cli._client_from_env()
 
 

@@ -2,18 +2,18 @@
 
 import argparse
 import json
-import os
 from collections.abc import Sequence
 from pathlib import Path
 
-from harness_example.adapters.anthropic import AnthropicMessagesClient
 from harness_example.adapters.incidents import InMemoryIncidentStore
+from harness_example.adapters.providers import client_from_env
 from harness_example.adapters.run_log import MetadataRunRecorder
 from harness_example.application.comparison import (
     PatternRunner,
     repeat_pattern,
     summarize_repetitions,
 )
+from harness_example.application.model_ports import ModelClient
 from harness_example.application.patterns.agent import BoundedIncidentAgent
 from harness_example.application.patterns.augmented import AugmentedIncidentAnalysis
 from harness_example.application.patterns.chaining import ChainedIncidentAnalysis
@@ -29,7 +29,7 @@ def _build_runner(
     pattern: AutonomyPattern,
     *,
     store: InMemoryIncidentStore,
-    model: AnthropicMessagesClient,
+    model: ModelClient,
 ) -> PatternRunner:
     if pattern is AutonomyPattern.AUGMENTED:
         return AugmentedIncidentAnalysis(store=store, model=model)
@@ -44,12 +44,8 @@ def _build_runner(
     return BoundedIncidentAgent(store=store, model=model)
 
 
-def _client_from_env() -> AnthropicMessagesClient:
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise SystemExit("ANTHROPIC_API_KEY is required for live runs")
-    model = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
-    return AnthropicMessagesClient(api_key=api_key, model=model)
+def _client_from_env() -> ModelClient:
+    return client_from_env()
 
 
 def _run_payload(run: PatternRun) -> dict[str, object]:
