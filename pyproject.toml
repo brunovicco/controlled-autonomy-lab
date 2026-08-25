@@ -1,20 +1,10 @@
 [project]
-name = "claude-python-engineering-harness-example"
-version = "0.1.0"
-description = "Python service generated from the Claude Code engineering harness"
+name = "controlled-autonomy-lab"
+version = "0.2.0"
+description = "Compare increasing levels of LLM autonomy on the same incident-analysis task"
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
-dependencies = [
-    "pydantic>=2.11",
-    "pydantic-settings>=2.8",
-    "structlog>=25.1",
-]
-
-[project.optional-dependencies]
-# Opt-in LLM tracing; see docs/LLM_OBSERVABILITY.md. Install with `uv sync --extra tracing`.
-tracing = [
-    "langfuse>=3.0",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
@@ -53,9 +43,9 @@ select = [
     "S",
 ]
 ignore = [
-    "ANN401", # Any is handled as an architecture concern and reviewed explicitly.
-    "D203",   # Incompatible with D211.
-    "D213",   # Google style uses D212.
+    "ANN401",
+    "D203",
+    "D213",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -73,7 +63,6 @@ line-ending = "auto"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 warn_unused_ignores = true
 show_error_codes = true
@@ -83,12 +72,6 @@ mypy_path = "src"
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-# langfuse is the optional "tracing" extra; not installed by default, so no
-# stubs are available unless a project opts in with `uv sync --extra tracing`.
-module = ["langfuse"]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers --cov=src/harness_example --cov-report=term-missing"

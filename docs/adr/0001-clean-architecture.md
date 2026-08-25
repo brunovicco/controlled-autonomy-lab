@@ -1,19 +1,19 @@
-# ADR-0001: Adopt Clean Architecture dependency boundaries
+# ADR-0001: Keep autonomy patterns behind Clean Architecture boundaries
 
 - Status: Accepted
-- Date: YYYY-MM-DD
+- Date: 2026-08-25
 
 ## Context
 
-The service requires business rules to remain independent from web frameworks, persistence, messaging, and external SDKs.
+The lab must compare orchestration patterns without coupling the experiment to an LLM provider, SDK or framework.
 
 ## Decision
 
-Use the dependency direction documented in `docs/ARCHITECTURE.md` and enforce it through package structure, review, tests, and import-contract tooling when introduced.
+Keep domain and application layers provider-neutral. External model protocols live in adapters, while the entrypoint selects a concrete adapter. Architecture validation remains part of the deterministic quality gate.
 
 ## Consequences
 
-- Domain code remains independently testable.
-- Boundary translation is explicit.
-- Small CRUD features should not receive unnecessary abstraction.
-- More mapping code is accepted where it protects domain semantics.
+- The same six patterns can run against multiple providers.
+- Provider serialization is explicit and independently tested.
+- Agent authority remains application-owned even when the provider changes.
+- Adding a provider may require mapping protocol differences at the adapter boundary.

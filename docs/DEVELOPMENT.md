@@ -1,51 +1,52 @@
-# Development guide
+# Development
 
 ## Setup
 
 ```bash
-uv sync --frozen
+uv sync --frozen --all-groups
 ```
 
-## Run checks
+The runtime intentionally has no third-party dependencies. Development dependencies provide linting, typing, tests, security scanning and dependency auditing.
+
+## Quality gate
 
 ```bash
 uv run python scripts/quality_gate.py
 ```
 
-## Container
+The gate runs:
 
-```bash
-docker build -t claude-python-engineering-harness-example .
-docker run --rm claude-python-engineering-harness-example
+```text
+uv lock --check
+ruff check .
+ruff format --check .
+architecture validation
+mypy
+pytest + coverage
+bandit
+pip-audit
 ```
 
-`Dockerfile` is a multi-stage, uv-based build: a `builder` stage installs the locked
-dependencies and builds the package, then only the resulting virtualenv and source are copied
-into a slim, non-root runtime image. The shipped `CMD` is a placeholder - this harness is
-framework-agnostic and does not assume an ASGI app, CLI, or worker loop. Replace it with the
-project's real entrypoint. Adjust `.dockerignore` if new top-level files or directories need to
-be excluded from the build context.
+The architecture validator and quality runner originated in `claude-python-engineering-harness` and remain because they provide deterministic value to this project. Generic MCP/governance validators and unused runtime scaffolding were removed.
 
-## Local configuration
+## Provider development
 
-Copy `.env.example` only when the application supports local dotenv loading. Never commit `.env` or real credentials.
+Keep application patterns provider-neutral. Add provider-specific serialization under `adapters/` and expose it through `adapters/providers.py` only when it satisfies both model ports required by the CLI.
 
-## Claude Code
+A new provider must have tests for:
 
-- Run `/memory` to confirm loaded instructions.
-- Run `/hooks` to inspect configured hooks.
-- Run `claude doctor` from the shell for a read-only installation and configuration check. Reserve
-  interactive `/doctor` for cases that may need guided repair, and review its requested commands.
-- Use `/plan-change` before complex work.
-- Use `/quality-gate` before completion.
-- Use `/prepare-pr` to produce a reviewable PR description.
+- text response mapping;
+- token-usage mapping;
+- HTTP/error redaction;
+- tool-call mapping if the agent is supported;
+- missing/invalid configuration.
 
-### Isolating riskier changes in a worktree
+Do not add a provider SDK just to reduce a small amount of serialization code. A new dependency should justify the abstraction it introduces.
 
-For a larger or harder-to-reverse change, add `isolation: worktree` to
-`.claude/agents/python-implementer.md`'s frontmatter before delegating the change. The subagent
-then works from a temporary git worktree branched off the default branch instead of editing the
-working tree directly; the worktree is cleaned up automatically if it makes no changes. This is
-not the harness default because it changes where edits land - add it deliberately for a specific
-change you want to inspect before merging into your working tree, then remove it again, rather
-than leaving it on for routine, well-scoped work.
+## Configuration
+
+`.env.example` documents supported variables but is not auto-loaded. Never commit provider keys. Use exported environment variables or an external secret mechanism.
+
+## Project-specific Claude Code support
+
+The only retained Skill is `.claude/skills/incident-analysis/SKILL.md`. It is optional development ergonomics, not a runtime dependency.

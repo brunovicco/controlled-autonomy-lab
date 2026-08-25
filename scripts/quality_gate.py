@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the project-owned quality gate from one executable entry point."""
+"""Run the project-owned deterministic quality gate."""
 
 import argparse
 import glob
@@ -19,7 +19,7 @@ class Check:
 
 
 def load_settings(root: Path) -> dict[str, object]:
-    """Load harness quality settings from pyproject.toml."""
+    """Load project quality settings from pyproject.toml."""
     with (root / "pyproject.toml").open("rb") as handle:
         project = tomllib.load(handle)
     tool = project.get("tool")
@@ -43,8 +43,7 @@ def expand_roots(root: Path, patterns: list[str]) -> list[str]:
     """Expand configured roots and retain only existing paths."""
     found: set[str] = set()
     for pattern in patterns:
-        matches = glob.glob(str(root / pattern))
-        for match in matches:
+        for match in glob.glob(str(root / pattern)):
             path = Path(match)
             if path.exists():
                 found.add(path.relative_to(root).as_posix())
@@ -52,12 +51,16 @@ def expand_roots(root: Path, patterns: list[str]) -> list[str]:
 
 
 def configured_checks(root: Path) -> list[Check]:
-    """Build commands from project-owned source and test roots."""
+    """Build checks from project-owned source and test roots."""
     settings = load_settings(root)
-    source_patterns = string_list(settings.get("source-roots"), ["src"])
-    test_patterns = string_list(settings.get("test-roots"), ["tests"])
-    source_roots = expand_roots(root, source_patterns)
-    test_roots = expand_roots(root, test_patterns)
+    source_roots = expand_roots(
+        root,
+        string_list(settings.get("source-roots"), ["src"]),
+    )
+    test_roots = expand_roots(
+        root,
+        string_list(settings.get("test-roots"), ["tests"]),
+    )
     type_roots = [*source_roots, *test_roots]
 
     checks = [
@@ -65,18 +68,14 @@ def configured_checks(root: Path) -> list[Check]:
         Check("lint", ("ruff", "check", ".")),
         Check("format", ("ruff", "format", "--check", ".")),
         Check("architecture", (sys.executable, "scripts/validate_architecture.py")),
-        Check("mcp", (sys.executable, "scripts/validate_mcp_config.py")),
-        Check("governance", (sys.executable, "scripts/governance_gate.py")),
-    ]
-    checks.append(Check("typing", ("mypy", *type_roots) if type_roots else ()))
-    checks.append(Check("tests", ("pytest",) if test_roots else ()))
-    checks.append(
+        Check("typing", ("mypy", *type_roots) if type_roots else ()),
+        Check("tests", ("pytest",) if test_roots else ()),
         Check(
             "security",
             ("bandit", "-c", "pyproject.toml", "-r", *source_roots) if source_roots else (),
-        )
-    )
-    checks.append(Check("dependencies", ("pip-audit",)))
+        ),
+        Check("dependencies", ("pip-audit",)),
+    ]
     return checks
 
 
@@ -89,7 +88,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    """Run selected checks, continuing to provide complete evidence."""
+    """Run selected checks and report complete evidence."""
     args = parse_args()
     root = Path(__file__).resolve().parents[1]
     checks = configured_checks(root)

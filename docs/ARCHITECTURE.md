@@ -2,9 +2,7 @@
 
 ## Purpose
 
-Controlled Autonomy Lab makes one architecture decision visible: **who owns the next step?**
-
-Every implementation analyzes the same incident and evidence. Only the control structure changes.
+Controlled Autonomy Lab makes one architecture decision visible: **who owns the next step?** Every implementation analyzes the same incident and evidence; only the control structure changes.
 
 ## Layering
 
@@ -17,61 +15,49 @@ domain      -> no outer layer
 
 ### Domain
 
-Provider-neutral types only:
-
-- incident and evidence;
-- pattern execution metadata;
-- evaluator verdicts;
-- tool specifications, tool calls, and agent messages.
+Provider-neutral types only: incident/evidence, execution metadata, evaluator verdicts, tool specifications, tool calls and agent messages.
 
 ### Application
 
-Owns all control-flow policies:
+Owns control-flow policy: fixed workflow topology, route allowlists, evaluator retry budget, agent step/tool-call budgets, cross-incident authorization and repeated-run comparison.
 
-- fixed workflow topology;
-- route allowlists;
-- evaluator retry budget;
-- agent step and tool-call budgets;
-- cross-incident authorization checks;
-- repeated-run comparison.
+`TextModel` and `AgentModel` are provider-neutral ports. `ModelClient` combines both capabilities only at composition time; individual patterns continue to depend on the narrowest interface they need.
 
 ### Adapters
 
-Own infrastructure details:
+Infrastructure translation is explicit:
 
-- deterministic in-memory evidence fixture;
-- Anthropic Messages API serialization/deserialization;
-- metadata-only JSONL run recording.
+```text
+                         +-> Anthropic Messages API
+application model ports-|
+                         +-> OpenAI-compatible Chat Completions
+                              + OpenAI preset
+                              + Groq preset
+                              + OpenRouter preset
+                              + custom HTTPS endpoint
+```
 
-The Anthropic adapter intentionally uses the standard library rather than introducing a framework. This keeps the architectural primitive visible: a message call, optional client tools, and tool results.
+Both transports use the Python standard library. No provider SDK, LangChain or LangGraph dependency is required to understand the message/tool boundary.
 
-### Entrypoints
+`providers.py` is composition only: it selects an adapter from environment variables. Provider selection never changes agent permissions or workflow topology.
 
-The CLI validates user-facing options, constructs dependencies, and renders results. It does not own investigation rules.
+### Entrypoint
+
+The CLI validates user-facing options, composes the selected provider and renders results. It does not own investigation rules.
 
 ## Pattern control flows
 
 ### Augmented LLM
 
 ```text
-incident
-   |
-load bounded evidence
-   |
-one model call
-   |
-answer
+incident -> bounded evidence -> one model call -> answer
 ```
-
-Application code owns the entire path.
 
 ### Chaining
 
 ```text
 incident -> extract facts -> assess -> recommend
 ```
-
-Each handoff is explicit. A model can judge within a step but cannot skip, add, or reorder steps.
 
 ### Routing
 
@@ -82,7 +68,7 @@ incident -> classifier  -> performance path
                          -> security path
 ```
 
-The model chooses a label. Code converts that label to `IncidentCategory`; anything outside the enum fails closed.
+The model chooses a label; code converts it to a bounded enum and fails closed on anything else.
 
 ### Parallelization
 
@@ -92,7 +78,7 @@ incident ----> changes ------> aggregate
              -> dependencies /
 ```
 
-The three specialist calls are independent and execute concurrently. Application code still owns fan-out and fan-in.
+Application code owns fan-out/fan-in.
 
 ### Evaluator-optimizer
 
@@ -104,76 +90,54 @@ incident -> generate -> evaluate -> pass? -> final     |
                          +---- no -> revise ------------+
 ```
 
-Guards:
-
-- evaluator output must match the application-owned JSON contract;
-- the revision budget is finite;
-- failure to meet quality after the budget raises an explicit error.
+Evaluator output has an application-owned JSON contract and the revision budget is finite.
 
 ### Agent
 
 ```text
-incident -> Claude
-             |
-             +-> metrics --------+
-             |                    |
-             +-> deployment -----+--> Claude -> ... -> final answer
-             |                    |
-             +-> runbook --------+
+incident -> selected LLM
+              |
+              +-> metrics --------+
+              |                    |
+              +-> deployment -----+--> selected LLM -> ... -> final answer
+              |                    |
+              +-> runbook --------+
 ```
 
-The exact sequence is not encoded in application code. The model chooses tools based on prior results.
-
-That autonomy is bounded by deterministic guards:
-
-```text
-model autonomy
-    |
-    +-- only five read-only tools
-    +-- active incident only
-    +-- max 6 model turns
-    +-- max 8 tool calls
-    +-- no production mutation tools
-```
+The sequence is model-controlled, but authority is not. Deterministic guards allow only five read-only tools, the active incident, at most six model turns and eight tool calls, with no production mutation tools.
 
 ## Trust boundaries
 
-### Claude API
+### External LLM provider
 
-Outbound content can include incident fixture data and prior tool results. The API key is read only from `ANTHROPIC_API_KEY` and is never written to run traces.
+Live runs send the incident fixture and, for the agent, prior tool results to the selected provider. Credentials are read from provider-specific environment variables and are never written to metadata traces.
 
-The default model is configurable through `CLAUDE_MODEL`; keeping it out of control-flow code makes model upgrades independent from architecture changes.
+The provider boundary is untrusted input in both directions. Adapters validate HTTP status, JSON shape and tool-call structure before returning provider-neutral domain objects. Raw error bodies are not surfaced in exceptions.
+
+### Custom base URL
+
+The custom OpenAI-compatible adapter accepts only HTTPS URLs without embedded credentials, query strings or fragments. This reduces accidental secret exposure and prevents silently accepting a non-TLS provider endpoint.
 
 ### Tool boundary
 
-A model tool request is untrusted input. The application checks:
-
-1. tool name exists in the allowlist;
-2. `incident_id` exactly matches the current incident;
-3. the global tool-call budget has not been exceeded.
-
-Only then does code return evidence.
+A model tool request is untrusted. Application code verifies the exact tool allowlist, active `incident_id` and global call budget before evidence is returned.
 
 ### Observability boundary
 
-`MetadataRunRecorder` stores operational metadata but deliberately excludes:
+`MetadataRunRecorder` stores only operational comparison metadata. It excludes prompts, answers, evidence bodies, tool arguments/results and credentials.
 
-- prompts;
-- answers;
-- evidence content;
-- tool arguments/results;
-- secrets.
+## Provider variance
 
-This lets repeated executions be compared without turning observability into a second data store for model content.
+`openrouter/free` intentionally optimizes accessibility rather than reproducibility because the underlying free model can vary. For controlled experiments, pin a concrete model/provider while holding the incident and autonomy budgets constant.
 
-## Why no A2A or MCP in the first version
+Provider token counters are retained as reported; the project does not pretend token accounting or pricing is identical across providers.
 
-There is no remote agent or MCP server boundary in this implementation. Introducing protocols only to display them would obscure the architectural comparison.
+## Why no A2A or MCP in this version
 
-When a later phase moves the evaluator or evidence provider to another process, `a2a-otel-kit` becomes appropriate for W3C trace-context propagation and metadata-only OTLP spans across those real boundaries.
+There is no remote agent or MCP server boundary. Protocol infrastructure would obscure the architecture comparison. If a later phase moves an evaluator, evidence provider or specialist agent to another process, `a2a-otel-kit` becomes appropriate for W3C trace-context propagation and metadata-only OTLP spans across those real boundaries.
 
 ## Core invariant
 
 > Escalate autonomy only when measurement shows the simpler pattern is insufficient.
 
-The repository is designed so that this statement can be tested with latency, token usage, tool-call count, quality behavior, and trajectory variance rather than accepted as an architectural slogan.
+The repository measures latency, token usage, model/tool-call count, quality behavior and trajectory variance so that statement can be tested rather than treated as a slogan.
