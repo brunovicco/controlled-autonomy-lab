@@ -5,13 +5,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from harness_example.domain.agent import (
-    AgentMessage,
-    AgentTurn,
-    ToolCall,
-    ToolResult,
-    ToolSpec,
-)
+from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
 from harness_example.domain.autonomy import ModelTurn, ModelUsage
 
 _API_HOST = "api.anthropic.com"
@@ -190,7 +184,10 @@ class AnthropicMessagesClient:
             return {"role": "assistant", "content": content}
         return {
             "role": "user",
-            "content": [AnthropicMessagesClient._tool_result_to_api(result) for result in message.tool_results],
+            "content": [
+                AnthropicMessagesClient._tool_result_to_api(result)
+                for result in message.tool_results
+            ],
         }
 
     @staticmethod

@@ -9,11 +9,17 @@ from pathlib import Path
 from harness_example.adapters.anthropic import AnthropicMessagesClient
 from harness_example.adapters.incidents import InMemoryIncidentStore
 from harness_example.adapters.run_log import MetadataRunRecorder
-from harness_example.application.comparison import PatternRunner, repeat_pattern, summarize_repetitions
+from harness_example.application.comparison import (
+    PatternRunner,
+    repeat_pattern,
+    summarize_repetitions,
+)
 from harness_example.application.patterns.agent import BoundedIncidentAgent
 from harness_example.application.patterns.augmented import AugmentedIncidentAnalysis
 from harness_example.application.patterns.chaining import ChainedIncidentAnalysis
-from harness_example.application.patterns.evaluator_optimizer import EvaluatorOptimizerIncidentAnalysis
+from harness_example.application.patterns.evaluator_optimizer import (
+    EvaluatorOptimizerIncidentAnalysis,
+)
 from harness_example.application.patterns.parallel import ParallelIncidentAnalysis
 from harness_example.application.patterns.routing import RoutedIncidentAnalysis
 from harness_example.domain.autonomy import AutonomyPattern, PatternRun

@@ -1,0 +1,117 @@
+import json
+from pathlib import Path
+
+import pytest
+
+import harness_example.entrypoints.autonomy_cli as cli
+from harness_example.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
+
+
+class StaticRunner:
+    def __init__(self, pattern: AutonomyPattern) -> None:
+        self._pattern = pattern
+        self.calls = 0
+
+    def run(self, incident_id: str) -> PatternRun:
+        self.calls += 1
+        return PatternRun(
+            pattern=self._pattern,
+            incident_id=incident_id,
+            answer="grounded answer",
+            model_calls=2,
+            tool_calls=1 if self._pattern is AutonomyPattern.AGENT else 0,
+            steps=("inspect", "final-answer"),
+            usage=ModelUsage(20, 5),
+            latency_ms=12.5,
+        )
+
+
+def _patch_live_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "_client_from_env", lambda: object())
+
+    def build_runner(
+        pattern: AutonomyPattern,
+        *,
+        store: object,
+        model: object,
+    ) -> StaticRunner:
+        del store, model
+        return StaticRunner(pattern)
+
+    monkeypatch.setattr(cli, "_build_runner", build_runner)
+
+
+def test_client_from_env_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    with pytest.raises(SystemExit, match="ANTHROPIC_API_KEY"):
+        cli._client_from_env()
+
+
+def test_run_command_supports_json_and_metadata_trace(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+    trace_file = tmp_path / "runs.jsonl"
+
+    exit_code = cli.main(
+        [
+            "--trace-file",
+            str(trace_file),
+            "run",
+            "augmented",
+            "--incident",
+            "INC-001",
+            "--json",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["pattern"] == "augmented"
+    assert payload["answer"] == "grounded answer"
+    trace = json.loads(trace_file.read_text(encoding="utf-8"))
+    assert "answer" not in trace
+
+
+def test_run_command_supports_human_output(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+
+    assert cli.main(["run", "agent"]) == 0
+
+    output = capsys.readouterr().out
+    assert "pattern:       agent" in output
+    assert "trajectory:    inspect -> final-answer" in output
+    assert "grounded answer" in output
+
+
+def test_compare_runs_every_pattern(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+
+    assert cli.main(["compare", "--incident", "INC-001"]) == 0
+
+    output = capsys.readouterr().out
+    for pattern in AutonomyPattern:
+        assert pattern.value in output
+
+
+def test_repeat_reports_trajectory_variance(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+
+    assert cli.main(["repeat", "agent", "--runs", "2"]) == 0
+
+    output = capsys.readouterr().out
+    assert "runs=2" in output
+    assert "unique_trajectories=1" in output
+    assert "run 1: inspect -> final-answer" in output

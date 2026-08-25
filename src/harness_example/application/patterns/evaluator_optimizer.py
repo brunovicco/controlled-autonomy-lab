@@ -5,7 +5,13 @@ from time import perf_counter
 from typing import Any
 
 from harness_example.application.ports import IncidentStore, TextModel
-from harness_example.domain.autonomy import AutonomyPattern, EvidenceItem, Incident, ModelUsage, PatternRun
+from harness_example.domain.autonomy import (
+    AutonomyPattern,
+    EvidenceItem,
+    Incident,
+    ModelUsage,
+    PatternRun,
+)
 from harness_example.domain.evaluation import EvaluationResult
 
 _EVALUATION_SYSTEM = """Evaluate the draft against every criterion below.

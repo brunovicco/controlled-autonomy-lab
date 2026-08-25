@@ -49,9 +49,9 @@ def test_evaluator_optimizer_rejects_invalid_schema() -> None:
     model = SequentialModel(["draft", "not-json"])
 
     with pytest.raises(InvalidEvaluationError, match="valid JSON"):
-        EvaluatorOptimizerIncidentAnalysis(
-            store=InMemoryIncidentStore(), model=model
-        ).run("INC-001")
+        EvaluatorOptimizerIncidentAnalysis(store=InMemoryIncidentStore(), model=model).run(
+            "INC-001"
+        )
 
 
 def test_evaluator_optimizer_stops_at_revision_limit() -> None:

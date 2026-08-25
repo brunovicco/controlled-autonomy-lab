@@ -3,7 +3,13 @@
 from time import perf_counter
 
 from harness_example.application.ports import IncidentStore, TextModel
-from harness_example.domain.autonomy import AutonomyPattern, EvidenceItem, Incident, ModelUsage, PatternRun
+from harness_example.domain.autonomy import (
+    AutonomyPattern,
+    EvidenceItem,
+    Incident,
+    ModelUsage,
+    PatternRun,
+)
 
 
 def _evidence_text(evidence: tuple[EvidenceItem, ...]) -> str:

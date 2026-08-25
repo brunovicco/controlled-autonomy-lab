@@ -4,12 +4,27 @@ from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
 from harness_example.application.ports import IncidentStore, TextModel
-from harness_example.domain.autonomy import AutonomyPattern, EvidenceItem, Incident, ModelUsage, PatternRun
+from harness_example.domain.autonomy import (
+    AutonomyPattern,
+    EvidenceItem,
+    Incident,
+    ModelUsage,
+    PatternRun,
+)
 
 _FOCUS_AREAS = (
-    ("metrics", "Analyze error-rate and latency evidence. Do not infer causes from timing alone."),
-    ("changes", "Analyze recent deployment/configuration evidence and rollback relevance."),
-    ("dependencies", "Analyze dependency evidence and what would confirm or falsify that hypothesis."),
+    (
+        "metrics",
+        "Analyze error-rate and latency evidence. Do not infer causes from timing alone.",
+    ),
+    (
+        "changes",
+        "Analyze recent deployment/configuration evidence and rollback relevance.",
+    ),
+    (
+        "dependencies",
+        "Analyze dependency evidence and what would confirm or falsify that hypothesis.",
+    ),
 )
 
 
@@ -49,8 +64,8 @@ class ParallelIncidentAnalysis:
         )
         aggregate = self._model.complete(
             system=(
-                "Aggregate independent specialist findings. Preserve disagreements and uncertainty; "
-                "return ranked hypotheses and reversible next checks."
+                "Aggregate independent specialist findings. Preserve disagreements and "
+                "uncertainty; return ranked hypotheses and reversible next checks."
             ),
             prompt=expert_prompt(incident, specialist_text),
         )

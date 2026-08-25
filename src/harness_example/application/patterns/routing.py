@@ -29,13 +29,16 @@ _ROUTE_INSTRUCTIONS = {
         "Focus on release timing, configuration changes, rollback evidence, and alternative causes."
     ),
     IncidentCategory.PERFORMANCE: (
-        "Focus on latency, saturation, error-rate movement, and evidence needed to isolate a bottleneck."
+        "Focus on latency, saturation, error-rate movement, and evidence needed to isolate "
+        "a bottleneck."
     ),
     IncidentCategory.DEPENDENCY: (
-        "Focus on upstream/downstream behavior and distinguish dependency correlation from confirmed cause."
+        "Focus on upstream/downstream behavior and distinguish dependency correlation from "
+        "confirmed cause."
     ),
     IncidentCategory.SECURITY: (
-        "Focus on security-relevant indicators and escalate uncertainty instead of inventing compromise evidence."
+        "Focus on security-relevant indicators and escalate uncertainty instead of inventing "
+        "compromise evidence."
     ),
 }
 

@@ -7,7 +7,7 @@ from harness_example.application.patterns.agent import (
     ToolInputError,
     ToolNotAllowedError,
 )
-from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall
+from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
 from harness_example.domain.autonomy import AutonomyPattern, ModelUsage
 
 
@@ -16,7 +16,13 @@ class ScriptedAgentModel:
         self._turns = iter(turns)
         self.histories: list[tuple[AgentMessage, ...]] = []
 
-    def next_turn(self, *, system: str, messages: tuple[AgentMessage, ...], tools: tuple[object, ...]) -> AgentTurn:
+    def next_turn(
+        self,
+        *,
+        system: str,
+        messages: tuple[AgentMessage, ...],
+        tools: tuple[ToolSpec, ...],
+    ) -> AgentTurn:
         assert "read-only" in system
         assert len(tools) == 5
         self.histories.append(messages)
@@ -36,7 +42,9 @@ def _tool_turn(call_id: str, name: str, incident_id: str = "INC-001") -> AgentTu
     )
 
 
-def _final_turn(text: str = "Deployment is a strong hypothesis; verify upstream timeout evidence.") -> AgentTurn:
+def _final_turn(
+    text: str = "Deployment is a strong hypothesis; verify upstream timeout evidence.",
+) -> AgentTurn:
     return AgentTurn(
         message=AgentMessage(role="assistant", text=text),
         usage=ModelUsage(10, 4),
