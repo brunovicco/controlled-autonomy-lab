@@ -1,3 +1,4 @@
+import http.client
 import json
 from typing import Any
 
@@ -9,7 +10,13 @@ from harness_example.domain.autonomy import ModelUsage
 
 
 class FakeHTTPResponse:
-    def __init__(self, payload: object, *, status: int = 200, raw: bytes | None = None) -> None:
+    def __init__(
+        self,
+        payload: object,
+        *,
+        status: int = 200,
+        raw: bytes | None = None,
+    ) -> None:
         self.status = status
         self._raw = raw if raw is not None else json.dumps(payload).encode("utf-8")
 
@@ -55,7 +62,7 @@ def _install_connection(
         assert timeout == 30.0
         return connection
 
-    monkeypatch.setattr(anthropic.http.client, "HTTPSConnection", factory)
+    monkeypatch.setattr(http.client, "HTTPSConnection", factory)
     return connection
 
 
@@ -148,7 +155,10 @@ def test_next_turn_round_trips_provider_neutral_tool_messages(
 
 
 def test_provider_http_error_is_redacted(monkeypatch: pytest.MonkeyPatch) -> None:
-    _install_connection(monkeypatch, FakeHTTPResponse({"secret": "do-not-leak"}, status=429))
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse({"secret": "do-not-leak"}, status=429),
+    )
     client = anthropic.AnthropicMessagesClient(api_key="test-key")
 
     with pytest.raises(anthropic.ModelProviderError, match="HTTP 429") as exc_info:
