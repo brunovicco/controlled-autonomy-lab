@@ -8,8 +8,8 @@ from autonomy_lab.application.semantic_claim_evaluation import (
     SemanticClaimEvaluationError,
     SemanticClaimEvaluatorV21,
 )
-from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
-from autonomy_lab.domain.claim_evaluation import ClaimKind
+from autonomy_lab.domain.autonomy import EvidenceItem, ModelTurn, ModelUsage
+from autonomy_lab.domain.claim_evaluation import ClaimEvaluationReport, ClaimKind
 
 _FIXTURE = (
     Path(__file__).parents[1]
@@ -31,7 +31,9 @@ class SequentialModel:
         return ModelTurn(next(self._responses), ModelUsage(20, 5))
 
 
-def _fixture_report(answer: str):
+def _fixture_report(
+    answer: str,
+) -> tuple[ClaimEvaluationReport, tuple[EvidenceItem, ...]]:
     store = InMemoryIncidentStore()
     incident = store.get_incident("INC-001")
     evidence = store.get_evidence(incident)
@@ -47,7 +49,11 @@ def test_semantic_layer_upgrades_only_conservative_historical_paraphrase() -> No
     deterministic, evidence = _fixture_report(_FIXTURE.read_text(encoding="utf-8"))
     model = SequentialModel(
         [
-            '{"verdict":"supported-fact","rationale":"Historical evidence states the same prior-incident relationship.","evidence_sources":["previous-incidents"]}'
+            (
+                '{"verdict":"supported-fact","rationale":"Historical evidence states '
+                'the same prior-incident relationship.","evidence_sources":'
+                '["previous-incidents"]}'
+            )
         ]
     )
 
@@ -98,7 +104,10 @@ def test_semantic_unsupported_confirms_conservative_deterministic_result() -> No
     deterministic, evidence = _fixture_report("The database was saturated.")
     model = SequentialModel(
         [
-            '{"verdict":"unsupported-claim","rationale":"No supplied evidence mentions database saturation.","evidence_sources":[]}'
+            (
+                '{"verdict":"unsupported-claim","rationale":"No supplied evidence '
+                'mentions database saturation.","evidence_sources":[]}'
+            )
         ]
     )
 
@@ -118,7 +127,10 @@ def test_semantic_response_rejects_unknown_evidence_source() -> None:
     deterministic, evidence = _fixture_report("The database was saturated.")
     model = SequentialModel(
         [
-            '{"verdict":"supported-fact","rationale":"Claim is supported.","evidence_sources":["external-web"]}'
+            (
+                '{"verdict":"supported-fact","rationale":"Claim is supported.",'
+                '"evidence_sources":["external-web"]}'
+            )
         ]
     )
 
