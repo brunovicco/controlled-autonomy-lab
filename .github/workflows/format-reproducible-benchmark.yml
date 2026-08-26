@@ -1,0 +1,53 @@
+name: format-reproducible-benchmark
+
+on:
+  push:
+    branches:
+      - feat/reproducible-benchmark-v1
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/reproducible-benchmark-v1
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version: "0.11.28"
+      - run: uv sync --frozen --all-groups
+      - name: Format benchmark files
+        run: |
+          uv run ruff format \
+            src/autonomy_lab/adapters/benchmark_artifacts.py \
+            src/autonomy_lab/adapters/benchmark_metadata.py \
+            src/autonomy_lab/application/benchmark.py \
+            src/autonomy_lab/cli.py \
+            src/autonomy_lab/domain/benchmark.py \
+            tests/unit/test_benchmark.py \
+            tests/unit/test_benchmark_artifacts.py \
+            tests/unit/test_benchmark_cli.py \
+            tests/unit/test_benchmark_metadata.py
+      - name: Commit formatting
+        run: |
+          if git diff --quiet; then
+            echo "Already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/autonomy_lab/adapters/benchmark_artifacts.py \
+            src/autonomy_lab/adapters/benchmark_metadata.py \
+            src/autonomy_lab/application/benchmark.py \
+            src/autonomy_lab/cli.py \
+            src/autonomy_lab/domain/benchmark.py \
+            tests/unit/test_benchmark.py \
+            tests/unit/test_benchmark_artifacts.py \
+            tests/unit/test_benchmark_cli.py \
+            tests/unit/test_benchmark_metadata.py
+          git commit -m "style: format reproducible benchmark"
+          git push origin HEAD:feat/reproducible-benchmark-v1
