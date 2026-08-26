@@ -13,7 +13,7 @@ Controlled Autonomy Lab is a small Python reference implementation for comparing
 
 The goal is not to prove that agents are better. It is to make the delegation boundary observable: **who owns the next step, deterministic application code or the model?**
 
-The comparison also includes a deterministic grounding signal so model/tool calls, token use and latency can be viewed alongside unsupported specifics, causal overclaims and uncertainty preservation.
+The comparison also includes a deterministic grounding signal so model/tool calls, token use and latency can be viewed alongside unsupported factual specifics, proposed action parameters, causal overclaims and uncertainty preservation.
 
 ## Provider support
 
@@ -135,6 +135,7 @@ src/autonomy_lab/
 │   └── grounding.py        # deterministic grounding result types
 ├── application/
 │   ├── model_ports.py      # common text + tool-use model boundary
+│   ├── model_errors.py     # provider-neutral error contract
 │   ├── grounding.py        # fixture-backed grounding evaluator
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
@@ -176,7 +177,7 @@ All patterns:
 uv run autonomy-lab compare --incident INC-001
 ```
 
-`compare` reports execution metrics plus `unsupported`, `causality`, and `uncertainty` for every architecture.
+`compare` reports execution metrics plus `unsupported`, `proposed`, `causality`, `uncertainty`, and `status` for every architecture. If one pattern is rate-limited or hits another provider error, completed rows are preserved and the remaining patterns still run. The command returns exit code `2` when the comparison is partial.
 
 Trajectory variance:
 
@@ -196,14 +197,17 @@ It currently checks:
 - timestamps;
 - measurements, percentages and durations;
 - exact percentage-point deltas derivable from fixture percentages;
-- strong causal language without a local uncertainty qualifier;
-- explicit preservation of uncertainty.
+- strong causal language without a local or section-level uncertainty qualifier;
+- explicit preservation of uncertainty;
+- proposal sections, where new time/measurement values are tracked as `proposed-parameter` instead of being counted as unsupported facts.
 
-This makes observed failures such as an invented previous release, timeout value, duration or latency measurement visible in the same experiment that measures calls, tools, tokens and latency.
+The parser excludes timestamp spans from measurement detection, so text such as `13:55 % 5xx = 0.2 %` cannot accidentally create a `55%` finding.
 
-It is intentionally **not** a universal hallucination detector. A `100%` specific-grounding ratio means that the exact specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct.
+This makes observed failures such as an invented previous release or latency measurement visible while keeping new monitoring windows and alert thresholds distinct from factual hallucinations.
 
-See [`docs/GROUNDING.md`](docs/GROUNDING.md) for methodology, examples, limitations and the trace boundary.
+It is intentionally **not** a universal hallucination detector. A `100%` specific-grounding ratio means that the exact factual specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct. Proposed action parameters are visible but excluded from that factual ratio.
+
+See [`docs/GROUNDING.md`](docs/GROUNDING.md) for methodology, examples, limitations, partial-benchmark behavior and the trace boundary.
 
 ## Agent authority boundary
 
