@@ -10,6 +10,7 @@ class GroundingFindingKind(StrEnum):
     UNSUPPORTED_MEASUREMENT = "unsupported-measurement"
     UNSUPPORTED_TIME = "unsupported-time"
     UNSUPPORTED_VERSION = "unsupported-version"
+    UNSUPPORTED_ASSOCIATION = "unsupported-association"
     PROPOSED_PARAMETER = "proposed-parameter"
     CAUSALITY_OVERCLAIM = "causality-overclaim"
 
@@ -35,7 +36,7 @@ class GroundingReport:
 
     @property
     def unsupported_count(self) -> int:
-        """Return the number of unique unsupported factual specifics."""
+        """Return the number of unique unsupported factual specifics or associations."""
         return len(self.unsupported_specifics)
 
     @property
