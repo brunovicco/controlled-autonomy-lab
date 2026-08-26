@@ -46,7 +46,10 @@ def benchmark_environment_from_env(
         max_tokens=int(settings.get("LLM_MAX_TOKENS", "1200")),
         timeout_seconds=float(settings.get("LLM_TIMEOUT_SECONDS", "30")),
         reasoning_effort=_effective_reasoning_effort(provider=provider, model=model),
-        git_commit=_git_commit(settings=settings, repository_root=repository_root or Path.cwd()),
+        git_commit=_git_commit(
+            settings=settings,
+            repository_root=repository_root or Path.cwd(),
+        ),
     )
 
 
@@ -67,7 +70,10 @@ def _git_commit(*, settings: Mapping[str, str], repository_root: Path) -> str:
         prefix = "gitdir: "
         if pointer.startswith(prefix):
             candidate = Path(pointer.removeprefix(prefix))
-            git_dir = candidate if candidate.is_absolute() else (repository_root / candidate).resolve()
+            if candidate.is_absolute():
+                git_dir = candidate
+            else:
+                git_dir = (repository_root / candidate).resolve()
 
     head = git_dir / "HEAD"
     if not head.is_file():
