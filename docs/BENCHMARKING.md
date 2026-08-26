@@ -57,7 +57,9 @@ Two live smoke benchmarks were run on 2026-08-26 with `openai/gpt-oss-20b` and `
 | `2s` | `2/6` | `augmented` and `chaining` completed; the remaining four patterns were rate-limited |
 | `30s` | `6/6` | all six patterns completed; benchmark exit code `0` |
 
-The 30-second smoke completed with these single-run grounding ratios: augmented `78.6%`, chaining `20.0%`, routing `84.6%`, parallel `85.7%`, evaluator-optimizer `91.7%`, and agent `78.6%`. These are calibration observations with `n=1`, not comparative conclusions; repeated cycles are required before interpreting architecture-level quality differences.
+The 30-second smoke completed with these single-run grounding ratios: augmented `78.6%`, chaining `20.0%`, routing `84.6%`, parallel `85.7%`, evaluator-optimizer `91.7%`, and agent `78.6%`. These are calibration observations with `n=1`, not comparative conclusions. The low chaining result is a signal to examine across repeated runs, not evidence that chaining is intrinsically less grounded.
+
+The same smoke also illustrates why latency and token use should be interpreted together: parallelization used the most aggregate tokens in that run while remaining faster in wall-clock time than chaining and the agent because its fan-out is concurrent. Again, repeated cycles are required before treating this as an architecture-level result.
 
 As of 2026-08-26, Groq's public Free Plan table lists `openai/gpt-oss-20b` at 30 RPM, 1K RPD, 8K TPM, and 200K TPD. Groq also states that rate limits apply at the organization level, that any configured limit can trigger first, and that the account Limits page is the source of truth for exact organization-specific values.
 
