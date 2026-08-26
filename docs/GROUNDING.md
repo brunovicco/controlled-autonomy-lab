@@ -2,7 +2,7 @@
 
 Grounding Evaluation v1 adds a deterministic quality signal to the architecture comparison.
 
-Its purpose is narrow: identify exact unsupported factual specifics, distinguish proposed action parameters, and flag unqualified causal claims by comparing a model answer with the bounded incident fixture already used by every pattern.
+Its purpose is narrow: identify exact unsupported factual specifics, distinguish proposed action parameters, detect a narrow class of unsupported timestamp-to-measurement associations, and flag unqualified causal claims by comparing a model answer with the bounded incident fixture already used by every pattern.
 
 It does **not** call another LLM. The fixture remains the source of truth.
 
@@ -65,7 +65,7 @@ The evaluator deduplicates repeated unsupported specifics so one invented value 
 
 ### Supported values can still form an unsupported association
 
-Grounding is not only a bag-of-values problem. The live Groq run exposed a row that placed the supported value `2840ms` at the supported timestamp `14:05`, even though the fixture only associates `2840ms` with `14:10`. Grounding Evaluation v1 now detects this narrow relational case in Markdown tables whose first column contains the row timestamp.
+Grounding is not only a bag-of-values problem. A live Groq run exposed a row that placed the supported value `2840ms` at the supported timestamp `14:05`, even though the fixture only associates `2840ms` with `14:10`. Grounding Evaluation v1 detects this narrow relational case in Markdown tables whose first column contains the row timestamp.
 
 ```text
 | 14:10 | p95 latency 2840ms | -> supported association
