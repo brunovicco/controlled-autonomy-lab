@@ -15,18 +15,23 @@ from autonomy_lab.domain.semantic_claim_evaluation import (
 )
 
 _SYSTEM = """You are a bounded semantic support classifier.
-Evaluate exactly one claim using only the supplied evidence summaries. Do not use outside knowledge.
+Evaluate exactly one claim using only the supplied evidence summaries.
+Do not use outside knowledge.
 Return exactly one JSON object and no Markdown or explanatory text.
 
-Schema:
-{"verdict":"supported-fact|supported-inference|unsupported-claim","rationale":"short reason","evidence_sources":["source-id"]}
+Schema fields:
+- verdict: supported-fact, supported-inference, or unsupported-claim
+- rationale: short reason
+- evidence_sources: list of supplied source ids
 
 Rules:
-- supported-fact: the evidence directly states or semantically entails the claim.
-- supported-inference: the claim is explicitly qualified as an inference/hypothesis and the evidence reasonably supports it without asserting causality as fact.
-- unsupported-claim: the evidence is insufficient, contradictory, or would require outside knowledge.
-- Historical evidence may support a statement about that historical incident, but must never establish the current incident's root cause.
-- evidence_sources must contain only source ids supplied with this request and only sources materially supporting the verdict.
+- supported-fact: evidence directly states or semantically entails the claim.
+- supported-inference: the claim is explicitly qualified as an inference or hypothesis,
+  and the evidence reasonably supports it without asserting causality as fact.
+- unsupported-claim: evidence is insufficient, contradictory, or needs outside knowledge.
+- Historical evidence may support a statement about that historical incident, but it must
+  never establish the current incident's root cause.
+- evidence_sources must contain only supplied ids that materially support the verdict.
 """
 
 
@@ -136,6 +141,7 @@ class SemanticClaimEvaluatorV21:
     """Evaluate only conservative deterministic misses and merge without weakening hard signals."""
 
     def __init__(self, *, model: TextModel) -> None:
+        """Configure the provider-neutral semantic model dependency."""
         self._model = model
 
     def evaluate(
