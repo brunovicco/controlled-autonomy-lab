@@ -1,5 +1,6 @@
 import csv
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -106,8 +107,60 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
 
     markdown = artifacts.summary_markdown.read_text(encoding="utf-8")
     assert "# Reproducible Benchmark Summary" in markdown
-    assert "agent | 1/1" in markdown
+    assert "only. It does not serialize" in markdown
+    assert "| agent | 1/1 | 5.0 | 4.0 | 3965 |" in markdown
     assert "parallel fan-out remains concurrent" in markdown
+
+
+def test_partial_summary_surfaces_rate_limit_context(tmp_path: Path) -> None:
+    rate_limited = replace(
+        _record(),
+        status=BenchmarkStatus.RATE_LIMITED,
+        model_calls=None,
+        tool_calls=None,
+        input_tokens=None,
+        output_tokens=None,
+        latency_ms=None,
+        unsupported_count=None,
+        proposed_count=None,
+        causality_overclaims=None,
+        grounding_ratio=None,
+        uncertainty_preserved=None,
+        trajectory=(),
+        retry_after="2",
+        error="Groq API returned HTTP 429",
+    )
+    summary = replace(
+        _summary(),
+        completed=0,
+        rate_limited=1,
+        completion_rate=0.0,
+        rate_limit_rate=1.0,
+        mean_model_calls=None,
+        mean_tool_calls=None,
+        mean_input_tokens=None,
+        mean_output_tokens=None,
+        mean_total_tokens=None,
+        p50_latency_ms=None,
+        mean_unsupported=None,
+        mean_proposed=None,
+        mean_causality_overclaims=None,
+        mean_grounding_ratio=None,
+        uncertainty_preservation_rate=None,
+        unique_trajectories=0,
+    )
+
+    artifacts = write_benchmark_artifacts(
+        output_dir=tmp_path,
+        config=_config(),
+        records=(rate_limited,),
+        summaries=(summary,),
+    )
+
+    markdown = artifacts.summary_markdown.read_text(encoding="utf-8")
+    assert "Benchmark status: `partial`" in markdown
+    assert "Rate limits occurred in this experiment." in markdown
+    assert "increase the attempt interval" in markdown
 
 
 def test_benchmark_artifacts_require_explicit_overwrite(tmp_path: Path) -> None:
