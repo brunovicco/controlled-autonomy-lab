@@ -21,8 +21,11 @@ _HYPOTHESIS_HEADING_RE = re.compile(
 )
 _INFERENCE_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
-    r"suggests?\b|consistent with|supports?\b|correlat\w*|interaction|"
-    r"no confirmed|not confirmed|unconfirmed|no evidence)\b",
+    r"suggests?\b|consistent with|supports?\b|correlat\w*|interaction)\b",
+    re.IGNORECASE,
+)
+_EPISTEMIC_INFERENCE_RE = re.compile(
+    r"^(?:no confirmed|not confirmed|unconfirmed|no evidence)\b",
     re.IGNORECASE,
 )
 _IMPERATIVE_RE = re.compile(
@@ -152,7 +155,9 @@ def _is_proposed(candidate: _ClaimCandidate) -> bool:
 
 def _is_inference(candidate: _ClaimCandidate) -> bool:
     return bool(
-        _INFERENCE_RE.search(candidate.text) or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
+        _INFERENCE_RE.search(candidate.text)
+        or _EPISTEMIC_INFERENCE_RE.search(candidate.text)
+        or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
     )
 
 
@@ -223,6 +228,18 @@ class DeterministicClaimEvaluatorV2:
                 evidence_sources=sources,
             )
 
+        if _is_direct_textual_support(
+            candidate.text,
+            incident=incident,
+            evidence=evidence,
+        ):
+            return ClaimEvaluation(
+                claim=candidate.text,
+                kind=ClaimKind.SUPPORTED_FACT,
+                rationale="deterministic-fixture-support",
+                evidence_sources=sources,
+            )
+
         if _is_inference(candidate):
             if sources:
                 return ClaimEvaluation(
@@ -237,11 +254,7 @@ class DeterministicClaimEvaluatorV2:
                 rationale="inference-without-evidence-anchor",
             )
 
-        if grounding.supported_specifics or _is_direct_textual_support(
-            candidate.text,
-            incident=incident,
-            evidence=evidence,
-        ):
+        if grounding.supported_specifics:
             return ClaimEvaluation(
                 claim=candidate.text,
                 kind=ClaimKind.SUPPORTED_FACT,
