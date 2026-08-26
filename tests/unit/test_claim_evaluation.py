@@ -39,6 +39,66 @@ def test_exact_fixture_text_without_numeric_specifics_can_be_supported_fact() ->
     assert report.support_ratio == 1.0
 
 
+def test_high_confidence_deployment_paraphrase_can_be_supported_fact() -> None:
+    incident, evidence = _fixture()
+
+    report = DeterministicClaimEvaluatorV2().evaluate(
+        answer="The deployment included a new payment-provider timeout configuration.",
+        incident=incident,
+        evidence=evidence,
+    )
+
+    claim = report.claims[0]
+    assert claim.kind is ClaimKind.SUPPORTED_FACT
+    assert claim.rationale == "deterministic-fixture-support"
+    assert "deployments" in claim.evidence_sources
+
+
+def test_high_confidence_dependency_negation_can_be_supported_fact() -> None:
+    incident, evidence = _fixture()
+
+    report = DeterministicClaimEvaluatorV2().evaluate(
+        answer="There is no confirmed payment-provider outage.",
+        incident=incident,
+        evidence=evidence,
+    )
+
+    claim = report.claims[0]
+    assert claim.kind is ClaimKind.SUPPORTED_FACT
+    assert claim.rationale == "deterministic-fixture-support"
+    assert "dependencies" in claim.evidence_sources
+
+
+def test_paraphrase_support_preserves_negation_polarity() -> None:
+    incident, evidence = _fixture()
+
+    report = DeterministicClaimEvaluatorV2().evaluate(
+        answer="There is a confirmed payment-provider outage.",
+        incident=incident,
+        evidence=evidence,
+    )
+
+    assert report.claims[0].kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert report.claims[0].rationale == "deterministic-v2-no-direct-support"
+
+
+def test_historical_paraphrase_remains_semantic_candidate() -> None:
+    incident, evidence = _fixture()
+
+    report = DeterministicClaimEvaluatorV2().evaluate(
+        answer=(
+            "A previous incident involved an upstream timeout mismatch, "
+            "but that is historical context only."
+        ),
+        incident=incident,
+        evidence=evidence,
+    )
+
+    assert report.claims[0].kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert report.claims[0].rationale == "deterministic-v2-no-direct-support"
+    assert report.claims[0].evidence_sources == ("previous-incidents",)
+
+
 def test_qualified_evidence_anchored_hypothesis_is_supported_inference() -> None:
     incident, evidence = _fixture()
 
