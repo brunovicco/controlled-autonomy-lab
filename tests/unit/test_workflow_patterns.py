@@ -2,11 +2,11 @@ from threading import Lock
 
 import pytest
 
-from harness_example.adapters.incidents import InMemoryIncidentStore
-from harness_example.application.patterns.chaining import ChainedIncidentAnalysis
-from harness_example.application.patterns.parallel import ParallelIncidentAnalysis
-from harness_example.application.patterns.routing import InvalidRouteError, RoutedIncidentAnalysis
-from harness_example.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
+from autonomy_lab.adapters.incidents import InMemoryIncidentStore
+from autonomy_lab.application.patterns.chaining import ChainedIncidentAnalysis
+from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
+from autonomy_lab.application.patterns.routing import InvalidRouteError, RoutedIncidentAnalysis
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
 
 
 class SequentialModel:

@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from harness_example.domain.autonomy import EvidenceItem, Incident, ModelTurn
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident, ModelTurn
 
 
 class TextModel(Protocol):

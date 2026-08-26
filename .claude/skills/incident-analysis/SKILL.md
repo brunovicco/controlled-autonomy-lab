@@ -21,7 +21,7 @@ Before running anything:
 Use the existing CLI:
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli ...
+uv run python -m autonomy_lab.cli ...
 ```
 
 Use the provider already selected through `LLM_PROVIDER`; do not silently switch providers during a comparison.

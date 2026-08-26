@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
-from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
-from harness_example.domain.autonomy import ModelTurn, ModelUsage
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
 
 
 class ModelProviderError(RuntimeError):

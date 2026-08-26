@@ -4,9 +4,9 @@ from typing import Any
 
 import pytest
 
-import harness_example.adapters.openai_compatible as compatible
-from harness_example.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
-from harness_example.domain.autonomy import ModelUsage
+import autonomy_lab.adapters.openai_compatible as compatible
+from autonomy_lab.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.domain.autonomy import ModelUsage
 
 
 class FakeHTTPResponse:

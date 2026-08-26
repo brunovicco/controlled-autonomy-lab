@@ -1,6 +1,6 @@
-from harness_example.adapters.incidents import InMemoryIncidentStore
-from harness_example.application.patterns.augmented import AugmentedIncidentAnalysis
-from harness_example.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
+from autonomy_lab.adapters.incidents import InMemoryIncidentStore
+from autonomy_lab.application.patterns.augmented import AugmentedIncidentAnalysis
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
 
 
 class StubTextModel:

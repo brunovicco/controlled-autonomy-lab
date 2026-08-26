@@ -1,14 +1,14 @@
 import pytest
 
-from harness_example.adapters.incidents import InMemoryIncidentStore
-from harness_example.application.patterns.agent import (
+from autonomy_lab.adapters.incidents import InMemoryIncidentStore
+from autonomy_lab.application.patterns.agent import (
     AgentLimitError,
     BoundedIncidentAgent,
     ToolInputError,
     ToolNotAllowedError,
 )
-from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
-from harness_example.domain.autonomy import AutonomyPattern, ModelUsage
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage
 
 
 class ScriptedAgentModel:

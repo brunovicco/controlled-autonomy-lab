@@ -2,8 +2,8 @@
 
 from time import perf_counter
 
-from harness_example.application.ports import IncidentStore, TextModel
-from harness_example.domain.autonomy import AutonomyPattern, EvidenceItem, Incident, PatternRun
+from autonomy_lab.application.ports import IncidentStore, TextModel
+from autonomy_lab.domain.autonomy import AutonomyPattern, EvidenceItem, Incident, PatternRun
 
 _SYSTEM = """You are a production incident analyst.
 Use only the supplied evidence. Separate observed facts from hypotheses. Never turn timing

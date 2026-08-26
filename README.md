@@ -47,14 +47,14 @@ export LLM_PROVIDER=openrouter
 export OPENROUTER_API_KEY="..."
 export OPENROUTER_MODEL=openrouter/free
 
-uv run python -m harness_example.entrypoints.autonomy_cli \
+uv run python -m autonomy_lab.cli \
   run augmented --incident INC-001
 ```
 
 Try the bounded agent with the same provider configuration:
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli \
+uv run python -m autonomy_lab.cli \
   run agent --incident INC-001
 ```
 
@@ -123,7 +123,7 @@ The fixture creates correlation without proving causality. Good output should di
 ## Architecture
 
 ```text
-src/harness_example/
+src/autonomy_lab/
 ├── domain/                 # provider-neutral contracts
 ├── application/
 │   ├── model_ports.py      # common text + tool-use model boundary
@@ -147,19 +147,19 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 One pattern:
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli run augmented --incident INC-001
+uv run python -m autonomy_lab.cli run augmented --incident INC-001
 ```
 
 All patterns:
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli compare --incident INC-001
+uv run python -m autonomy_lab.cli compare --incident INC-001
 ```
 
 Trajectory variance:
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli repeat agent --incident INC-001 --runs 5
+uv run python -m autonomy_lab.cli repeat agent --incident INC-001 --runs 5
 ```
 
 Live runs can consume quota or paid tokens depending on the selected provider.
@@ -181,7 +181,7 @@ Deterministic code enforces `max_steps=6`, `max_tool_calls=8`, the exact tool-na
 ## Metadata-only traces
 
 ```bash
-uv run python -m harness_example.entrypoints.autonomy_cli \
+uv run python -m autonomy_lab.cli \
   --trace-file traces/runs.jsonl \
   repeat agent --runs 5
 ```
