@@ -70,6 +70,7 @@ class AnthropicMessagesClient:
                     "name": tool.name,
                     "description": tool.description,
                     "input_schema": dict(tool.input_schema),
+                    "strict": True,
                 }
                 for tool in tools
             ],
