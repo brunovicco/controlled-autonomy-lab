@@ -5,6 +5,7 @@ import pytest
 
 import autonomy_lab.cli as cli
 from autonomy_lab.application.model_errors import ModelRateLimitError
+from autonomy_lab.application.semantic_claim_evaluation import SemanticClaimEvaluationError
 from autonomy_lab.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage, PatternRun
 
 
@@ -202,7 +203,7 @@ def test_semantic_claim_failure_returns_partial_without_losing_run(
 
     def fail_semantic(*args: object, **kwargs: object) -> object:
         del args, kwargs
-        raise cli.SemanticClaimEvaluationError("semantic evaluator returned invalid JSON")
+        raise SemanticClaimEvaluationError("semantic evaluator returned invalid JSON")
 
     monkeypatch.setattr(cli, "_semantic_claim_evaluation_for_run", fail_semantic)
 
