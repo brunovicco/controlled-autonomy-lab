@@ -100,6 +100,9 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
         rows = list(csv.DictReader(handle))
     assert rows[0]["pattern"] == "agent"
     assert rows[0]["completed"] == "1"
+    assert rows[0]["max_tokens"] == "900"
+    assert rows[0]["timeout_seconds"] == "30.0"
+    assert rows[0]["benchmark_status"] == "complete"
 
     markdown = artifacts.summary_markdown.read_text(encoding="utf-8")
     assert "# Reproducible Benchmark Summary" in markdown
@@ -108,15 +111,29 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
 
 
 def test_benchmark_artifacts_require_explicit_overwrite(tmp_path: Path) -> None:
-    kwargs = {
-        "output_dir": tmp_path,
-        "config": _config(),
-        "records": (_record(),),
-        "summaries": (_summary(),),
-    }
-    write_benchmark_artifacts(**kwargs)
+    config = _config()
+    records = (_record(),)
+    summaries = (_summary(),)
+
+    write_benchmark_artifacts(
+        output_dir=tmp_path,
+        config=config,
+        records=records,
+        summaries=summaries,
+    )
 
     with pytest.raises(FileExistsError, match="--overwrite"):
-        write_benchmark_artifacts(**kwargs)
+        write_benchmark_artifacts(
+            output_dir=tmp_path,
+            config=config,
+            records=records,
+            summaries=summaries,
+        )
 
-    write_benchmark_artifacts(**kwargs, overwrite=True)
+    write_benchmark_artifacts(
+        output_dir=tmp_path,
+        config=config,
+        records=records,
+        summaries=summaries,
+        overwrite=True,
+    )
