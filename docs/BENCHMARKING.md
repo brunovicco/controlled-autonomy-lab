@@ -19,7 +19,7 @@ uv run autonomy-lab benchmark \
   --incident INC-001 \
   --runs 5 \
   --output results/groq-gpt-oss-20b \
-  --run-interval-seconds 2
+  --run-interval-seconds 30
 ```
 
 The command executes all six patterns once per cycle. The starting pattern rotates deterministically on each cycle so the same architecture is not always first or last:
@@ -47,6 +47,20 @@ It deliberately does not throttle calls inside an architecture pattern. Therefor
 This preserves the behavior being measured. A provider `429` that occurs inside a pattern remains benchmark evidence rather than being hidden by an implicit retry or a benchmark-specific serialization layer.
 
 There are no automatic retries in Benchmark v1.
+
+### Groq Free Plan calibration
+
+The first live smoke benchmark of `openai/gpt-oss-20b` used a 2-second interval. `augmented` and `chaining` completed, while the remaining four patterns were rate-limited. That is a valid benchmark result, but it also demonstrates that a 2-second interval is too aggressive for this workload under the observed Free Plan conditions.
+
+As of 2026-08-26, Groq's public Free Plan table lists `openai/gpt-oss-20b` at 30 RPM, 1K RPD, 8K TPM, and 200K TPD. Groq also states that rate limits apply at the organization level, that any configured limit can trigger first, and that the account Limits page is the source of truth for exact organization-specific values.
+
+For this repository's six-pattern workload, **30 seconds between benchmark attempts is the recommended conservative starting point for Groq Free Plan experiments**. It is a benchmark configuration, not an automatic retry or guarantee. If the organization-specific limit differs or `429` still occurs, preserve that run as evidence and execute a separate experiment with a larger interval.
+
+Do not rerun only failed patterns and splice them into the original benchmark. That would change the experimental conditions and distort reliability metrics.
+
+Official reference:
+
+- Groq rate limits: https://console.groq.com/docs/rate-limits
 
 ## Output protection
 
@@ -145,6 +159,8 @@ Current aggregates include:
 - uncertainty-preservation rate;
 - unique successful trajectories.
 
+When at least one attempt is rate-limited, `summary.md` explicitly states that the rate limit is benchmark evidence and recommends using a larger interval only in a **separate** experiment.
+
 ## Exit codes
 
 A complete benchmark returns:
@@ -178,6 +194,7 @@ Official references:
 
 - Groq API reference: https://console.groq.com/docs/api-reference
 - Groq GPT-OSS 20B: https://console.groq.com/docs/model/openai/gpt-oss-20b
+- Groq rate limits: https://console.groq.com/docs/rate-limits
 
 ## Recommended experiment protocol
 
@@ -186,12 +203,13 @@ For a first publishable local experiment:
 1. choose one provider/model and freeze the environment variables;
 2. sync the repository and record the exact commit automatically;
 3. choose a dedicated output directory;
-4. run at least five cycles;
-5. preserve partial results instead of rerunning only failed patterns;
-6. treat rate-limit rate as part of the observed provider/runtime behavior;
-7. compare another provider/model in a separate output directory rather than mixing configurations.
+4. choose pacing appropriate to the provider/account limits;
+5. run at least five cycles;
+6. preserve partial results instead of rerunning only failed patterns;
+7. treat rate-limit rate as part of the observed provider/runtime behavior;
+8. compare another provider/model in a separate output directory rather than mixing configurations.
 
-Example:
+Groq Free Plan example:
 
 ```bash
 export LLM_PROVIDER=groq
@@ -201,7 +219,7 @@ export LLM_MAX_TOKENS=900
 uv run autonomy-lab benchmark \
   --incident INC-001 \
   --runs 5 \
-  --run-interval-seconds 2 \
+  --run-interval-seconds 30 \
   --output results/groq-gpt-oss-20b-900
 ```
 
@@ -211,7 +229,8 @@ Benchmark v1 intentionally remains narrow:
 
 - one incident fixture is not a universal workload benchmark;
 - deterministic grounding v1 only checks its documented factual structures;
-- model/provider conditions can change over time;
+- model/provider conditions and rate limits can change over time;
+- the documented Groq Free Plan baseline is a dated experimental recommendation, not a permanent provider guarantee;
 - cost is not normalized because providers expose different pricing and free-tier behavior;
 - no hidden retry means transient failures remain visible rather than being corrected after the fact;
 - p50 latency summarizes completed runs but does not characterize tail latency with small sample sizes;
