@@ -1,9 +1,9 @@
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
-from autonomy_lab.domain.grounding import GroundingFindingKind
+from autonomy_lab.domain.grounding import GroundingFindingKind, GroundingReport
 
 
-def _evaluate(answer: str):
+def _evaluate(answer: str) -> GroundingReport:
     store = InMemoryIncidentStore()
     incident = store.get_incident("INC-001")
     return DeterministicGroundingEvaluator().evaluate(
@@ -38,9 +38,7 @@ Create an alert above 5% and p95 above 1 s.
 
 
 def test_invented_observation_window_endpoint_remains_unsupported() -> None:
-    report = _evaluate(
-        "Dependency latency increased during the observed interval 14:00-14:15."
-    )
+    report = _evaluate("Dependency latency increased during the observed interval 14:00-14:15.")
 
     assert report.unsupported_count == 1
     assert report.unsupported_specifics[0].kind is GroundingFindingKind.UNSUPPORTED_TIME
