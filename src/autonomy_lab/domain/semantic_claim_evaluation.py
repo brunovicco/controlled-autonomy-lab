@@ -43,7 +43,7 @@ class MergedClaimEvaluation:
 
 @dataclass(frozen=True, slots=True)
 class MergedClaimEvaluationReport:
-    """Merged v2.1 report with semantic-call accounting kept separate from the pattern run."""
+    """Merged v2.1 report with semantic-call accounting separate from the pattern run."""
 
     claims: tuple[MergedClaimEvaluation, ...]
     semantic_model_calls: int = 0
@@ -51,34 +51,42 @@ class MergedClaimEvaluationReport:
 
     @property
     def supported_fact_count(self) -> int:
+        """Return final claims classified as supported facts."""
         return self._count(ClaimKind.SUPPORTED_FACT)
 
     @property
     def supported_inference_count(self) -> int:
+        """Return final claims classified as supported inferences."""
         return self._count(ClaimKind.SUPPORTED_INFERENCE)
 
     @property
     def proposed_action_count(self) -> int:
+        """Return final claims classified as proposed actions."""
         return self._count(ClaimKind.PROPOSED_ACTION)
 
     @property
     def unsupported_claim_count(self) -> int:
+        """Return final claims that remain unsupported."""
         return self._count(ClaimKind.UNSUPPORTED_CLAIM)
 
     @property
     def disagreement_count(self) -> int:
+        """Return claims where semantic and deterministic classifications differ."""
         return sum(item.disagreement for item in self.claims)
 
     @property
     def evaluable_claim_count(self) -> int:
+        """Return final non-action claims included in the support ratio."""
         return len(self.claims) - self.proposed_action_count
 
     @property
     def supported_claim_count(self) -> int:
+        """Return final supported facts plus supported inferences."""
         return self.supported_fact_count + self.supported_inference_count
 
     @property
     def support_ratio(self) -> float:
+        """Return final supported non-action claims divided by evaluable claims."""
         total = self.evaluable_claim_count
         if total == 0:
             return 1.0
