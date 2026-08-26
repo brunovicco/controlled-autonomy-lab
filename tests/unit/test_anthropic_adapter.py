@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import autonomy_lab.adapters.anthropic as anthropic
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
 from autonomy_lab.domain.autonomy import ModelUsage
 
@@ -16,12 +17,17 @@ class FakeHTTPResponse:
         *,
         status: int = 200,
         raw: bytes | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.status = status
         self._raw = raw if raw is not None else json.dumps(payload).encode("utf-8")
+        self._headers = {key.lower(): value for key, value in (headers or {}).items()}
 
     def read(self) -> bytes:
         return self._raw
+
+    def getheader(self, name: str, default: str | None = None) -> str | None:
+        return self._headers.get(name.lower(), default)
 
 
 class RecordingConnection:
@@ -154,24 +160,75 @@ def test_next_turn_round_trips_provider_neutral_tool_messages(
     assert request["messages"][2]["content"][0]["type"] == "tool_result"
 
 
-def test_provider_http_error_is_redacted(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rate_limit_error_is_typed_redacted_and_preserves_retry_after(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _install_connection(
         monkeypatch,
-        FakeHTTPResponse({"secret": "do-not-leak"}, status=429),
+        FakeHTTPResponse(
+            {"error": {"message": "do-not-leak"}},
+            status=429,
+            headers={"retry-after": "9"},
+        ),
     )
     client = anthropic.AnthropicMessagesClient(api_key="test-key")
 
-    with pytest.raises(anthropic.ModelProviderError, match="HTTP 429") as exc_info:
+    with pytest.raises(ModelRateLimitError, match="HTTP 429") as exc_info:
         client.complete(system="system", prompt="prompt")
 
     assert "do-not-leak" not in str(exc_info.value)
+    assert exc_info.value.retry_after == "9"
+
+
+def test_provider_http_error_exposes_only_safe_bounded_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse(
+            {
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "Your credit balance is too low for test-key",
+                },
+                "request_id": "req-sensitive-metadata",
+                "secret": "do-not-leak",
+            },
+            status=400,
+        ),
+    )
+    client = anthropic.AnthropicMessagesClient(api_key="test-key")
+
+    with pytest.raises(ModelProviderError) as exc_info:
+        client.complete(system="system", prompt="prompt")
+
+    message = str(exc_info.value)
+    assert "HTTP 400" in message
+    assert "type=invalid_request_error" in message
+    assert "credit balance is too low" in message
+    assert "test-key" not in message
+    assert "req-sensitive-metadata" not in message
+    assert "do-not-leak" not in message
+
+
+def test_complete_reports_stop_reason_when_text_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse({"content": [], "stop_reason": "max_tokens"}),
+    )
+    client = anthropic.AnthropicMessagesClient(api_key="test-key")
+
+    with pytest.raises(ModelProviderError, match="stop_reason=max_tokens"):
+        client.complete(system="system", prompt="prompt")
 
 
 def test_provider_rejects_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
     _install_connection(monkeypatch, FakeHTTPResponse({}, raw=b"not-json"))
     client = anthropic.AnthropicMessagesClient(api_key="test-key")
 
-    with pytest.raises(anthropic.ModelProviderError, match="invalid JSON"):
+    with pytest.raises(ModelProviderError, match="invalid JSON"):
         client.complete(system="system", prompt="prompt")
 
 
