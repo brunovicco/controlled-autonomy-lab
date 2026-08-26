@@ -21,6 +21,7 @@ The first version intentionally favors checks that are explainable and reproduci
 - strong causal language without local or section-level uncertainty qualifiers;
 - causal statements about historical incidents only when the same historical incident and causal detail are supported by fixture evidence;
 - whether the answer preserves explicit uncertainty language;
+- timestamp-to-measurement associations in Markdown table rows when the fixture encodes an exact pair;
 - whether an otherwise unsupported time/measurement appears under a recommendation/action section rather than as an observed fact.
 
 Timestamp spans are excluded from measurement parsing. This prevents text such as `13:55 % 5xx = 0.2 %` from incorrectly producing an invented `55%` measurement.
@@ -32,6 +33,7 @@ Timestamp spans are excluded from measurement parsing. This prevents text such a
 | `unsupported-version` | a concrete version appears in the answer but not in the incident/evidence fixture |
 | `unsupported-time` | a timestamp is presented outside a proposal section but does not exist in the fixture |
 | `unsupported-measurement` | a factual measurement, percentage, or duration is neither present nor explicitly derivable from the fixture |
+| `unsupported-association` | individually supported values are paired in a Markdown table row in a way the fixture does not support |
 | `proposed-parameter` | an otherwise unsupported timestamp/measurement occurs under a recommendation/action heading and is tracked separately from factual grounding |
 | `causality-overclaim` | strong causal language appears without a local or section-level uncertainty qualifier and without supporting historical evidence |
 
@@ -60,6 +62,18 @@ Concrete semantic versions remain checkable even inside recommendations. For exa
 Likewise, an invented observation-window endpoint remains a factual finding. If the fixture only says that dependency latency increased shortly after `14:00`, an answer that presents `14:00-14:15` as the observed interval introduces the unsupported endpoint `14:15`.
 
 The evaluator deduplicates repeated unsupported specifics so one invented value repeated multiple times does not artificially inflate the score.
+
+### Supported values can still form an unsupported association
+
+Grounding is not only a bag-of-values problem. The live Groq run exposed a row that placed the supported value `2840ms` at the supported timestamp `14:05`, even though the fixture only associates `2840ms` with `14:10`. Grounding Evaluation v1 now detects this narrow relational case in Markdown tables whose first column contains the row timestamp.
+
+```text
+| 14:10 | p95 latency 2840ms | -> supported association
+| 14:05 | p95 latency 2840ms | -> unsupported-association
+```
+
+This check is intentionally structural. It does not claim to resolve arbitrary temporal or relational statements in free-form prose. Cells that contain their own timestamp are skipped rather than forced into the row timestamp, and proposal sections remain outside factual association scoring.
+
 
 ## Proposed parameters versus unsupported facts
 
