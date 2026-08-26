@@ -5,7 +5,8 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from autonomy_lab.application.model_errors import ModelProviderError as ModelProviderError
+from autonomy_lab.adapters.provider_error_detail import safe_provider_error_detail
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
 from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
 
@@ -108,8 +109,15 @@ class AnthropicMessagesClient:
         finally:
             connection.close()
 
+        if response.status == 429:
+            raise ModelRateLimitError(
+                "Anthropic API returned HTTP 429",
+                retry_after=response.getheader("retry-after"),
+            )
         if response.status < 200 or response.status >= 300:
-            raise ModelProviderError(f"Anthropic API returned HTTP {response.status}")
+            detail = safe_provider_error_detail(raw, secret=self._api_key)
+            suffix = f": {detail}" if detail else ""
+            raise ModelProviderError(f"Anthropic API returned HTTP {response.status}{suffix}")
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
@@ -130,7 +138,10 @@ class AnthropicMessagesClient:
         ]
         text = "\n".join(part for part in parts if isinstance(part, str)).strip()
         if required and not text:
-            raise ModelProviderError("Anthropic response did not contain text")
+            stop_reason = str(response.get("stop_reason") or "unknown")
+            raise ModelProviderError(
+                f"Anthropic response did not contain text (stop_reason={stop_reason})"
+            )
         return text
 
     @staticmethod
