@@ -12,10 +12,10 @@ from autonomy_lab.domain.grounding import (
 
 _VERSION_RE = re.compile(r"(?<![\w.])v\d+\.\d+\.\d+(?![\w.])", re.IGNORECASE)
 _TIME_RE = re.compile(r"(?<!\d)(?:[01]?\d|2[0-3]):[0-5]\d(?!\d)")
+_NUMBER_PATTERN = r"(?:\d{1,3}(?:[,\u202f\xa0 ]\d{3})+|\d+)(?:\.\d+)?"
 _MEASUREMENT_RE = re.compile(
-    r"(?<![\w.])"
-    r"\d[\d,]*(?:\.\d+)?"
-    r"(?:\s*[–—-]\s*\d[\d,]*(?:\.\d+)?)?"
+    rf"(?<![\w.]){_NUMBER_PATTERN}"
+    rf"(?:\s*[–—-]\s*{_NUMBER_PATTERN})?"
     r"\s*(?:%|pp|ms|milliseconds?|secs?|seconds?|s|mins?|minutes?|hours?|hrs?)"
     r"(?!\w)",
     re.IGNORECASE,
