@@ -13,6 +13,8 @@ Controlled Autonomy Lab is a small Python reference implementation for comparing
 
 The goal is not to prove that agents are better. It is to make the delegation boundary observable: **who owns the next step, deterministic application code or the model?**
 
+The comparison also includes a deterministic grounding signal so model/tool calls, token use and latency can be viewed alongside unsupported specifics, causal overclaims and uncertainty preservation.
+
 ## Provider support
 
 The architecture is provider-neutral. The project includes two transport adapters:
@@ -128,9 +130,12 @@ The fixture creates correlation without proving causality. Good output should di
 
 ```text
 src/autonomy_lab/
-├── domain/                 # provider-neutral contracts
+├── domain/
+│   ├── autonomy.py         # provider-neutral run contracts
+│   └── grounding.py        # deterministic grounding result types
 ├── application/
 │   ├── model_ports.py      # common text + tool-use model boundary
+│   ├── grounding.py        # fixture-backed grounding evaluator
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
 │   ├── anthropic.py
@@ -153,11 +158,25 @@ One pattern:
 uv run autonomy-lab run augmented --incident INC-001
 ```
 
+One pattern with deterministic grounding findings:
+
+```bash
+uv run autonomy-lab run agent --incident INC-001 --grounding
+```
+
+Structured result including grounding:
+
+```bash
+uv run autonomy-lab run agent --incident INC-001 --grounding --json
+```
+
 All patterns:
 
 ```bash
 uv run autonomy-lab compare --incident INC-001
 ```
+
+`compare` reports execution metrics plus `unsupported`, `causality`, and `uncertainty` for every architecture.
 
 Trajectory variance:
 
@@ -166,6 +185,25 @@ uv run autonomy-lab repeat agent --incident INC-001 --runs 5
 ```
 
 Live runs can consume quota or paid tokens depending on the selected provider.
+
+## Grounding Evaluation v1
+
+Grounding Evaluation v1 is deterministic: it does not call another LLM and treats the bounded incident fixture as the source of truth.
+
+It currently checks:
+
+- semantic versions;
+- timestamps;
+- measurements, percentages and durations;
+- exact percentage-point deltas derivable from fixture percentages;
+- strong causal language without a local uncertainty qualifier;
+- explicit preservation of uncertainty.
+
+This makes observed failures such as an invented previous release, timeout value, duration or latency measurement visible in the same experiment that measures calls, tools, tokens and latency.
+
+It is intentionally **not** a universal hallucination detector. A `100%` specific-grounding ratio means that the exact specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct.
+
+See [`docs/GROUNDING.md`](docs/GROUNDING.md) for methodology, examples, limitations and the trace boundary.
 
 ## Agent authority boundary
 
@@ -189,7 +227,7 @@ uv run autonomy-lab \
   repeat agent --runs 5
 ```
 
-The trace contains pattern, incident id, model/tool call counts, trajectory, token counts and latency. It deliberately excludes prompts, model answers, evidence content, tool arguments/results and credentials.
+The trace contains pattern, incident id, model/tool call counts, trajectory, token counts and latency. It deliberately excludes prompts, model answers, evidence content, tool arguments/results and credentials. Grounding findings are not persisted in this metadata-only trace because they are derived from answer content.
 
 ## Quality gate
 
