@@ -5,16 +5,13 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.application.model_errors import ModelProviderError as ModelProviderError
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
 from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
 
 _API_HOST = "api.anthropic.com"
 _API_PATH = "/v1/messages"
 _API_VERSION = "2023-06-01"
-
-
-class ModelProviderError(RuntimeError):
-    """Raised when the external model provider cannot return a valid turn."""
 
 
 class AnthropicMessagesClient:
@@ -62,7 +59,7 @@ class AnthropicMessagesClient:
         messages: tuple[AgentMessage, ...],
         tools: tuple[ToolSpec, ...],
     ) -> AgentTurn:
-        """Execute one Messages API turn with strict client-tool contracts."""
+        """Execute one tool-use turn and normalize it into provider-neutral domain types."""
         body = {
             "model": self._model,
             "max_tokens": self._max_tokens,
@@ -80,28 +77,12 @@ class AnthropicMessagesClient:
             "tool_choice": {"type": "auto"},
         }
         response = self._post(body)
-        content = response.get("content")
-        if not isinstance(content, list):
-            raise ModelProviderError("Claude API response is missing content")
-        tool_calls: list[ToolCall] = []
-        for block in content:
-            if not isinstance(block, dict) or block.get("type") != "tool_use":
-                continue
-            call_id = block.get("id")
-            name = block.get("name")
-            arguments = block.get("input")
-            if not isinstance(call_id, str) or not isinstance(name, str):
-                raise ModelProviderError("Claude API returned malformed tool_use metadata")
-            if not isinstance(arguments, dict):
-                raise ModelProviderError("Claude API returned malformed tool input")
-            tool_calls.append(ToolCall(call_id=call_id, name=name, arguments=arguments))
-        message = AgentMessage(
-            role="assistant",
-            text=self._extract_text(response, required=False),
-            tool_calls=tuple(tool_calls),
-        )
         return AgentTurn(
-            message=message,
+            message=AgentMessage(
+                role="assistant",
+                text=self._extract_text(response, required=False),
+                tool_calls=self._extract_tool_calls(response),
+            ),
             usage=self._extract_usage(response),
             stop_reason=str(response.get("stop_reason") or "unknown"),
         )
@@ -115,42 +96,63 @@ class AnthropicMessagesClient:
                 _API_PATH,
                 body=payload,
                 headers={
+                    "x-api-key": self._api_key,
                     "anthropic-version": _API_VERSION,
                     "content-type": "application/json",
-                    "x-api-key": self._api_key,
                 },
             )
             response = connection.getresponse()
             raw = response.read()
         except (OSError, http.client.HTTPException) as exc:
-            raise ModelProviderError("Claude API request failed") from exc
+            raise ModelProviderError("Anthropic request failed") from exc
         finally:
             connection.close()
 
         if response.status < 200 or response.status >= 300:
-            raise ModelProviderError(f"Claude API returned HTTP {response.status}")
+            raise ModelProviderError(f"Anthropic API returned HTTP {response.status}")
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise ModelProviderError("Claude API returned invalid JSON") from exc
+            raise ModelProviderError("Anthropic API returned invalid JSON") from exc
         if not isinstance(decoded, dict):
-            raise ModelProviderError("Claude API response must be a JSON object")
+            raise ModelProviderError("Anthropic API response must be a JSON object")
         return decoded
 
     @staticmethod
     def _extract_text(response: Mapping[str, Any], *, required: bool) -> str:
         content = response.get("content")
         if not isinstance(content, list):
-            raise ModelProviderError("Claude API response is missing content")
-        chunks = [
+            raise ModelProviderError("Anthropic response is missing content")
+        parts = [
             block.get("text", "")
             for block in content
             if isinstance(block, dict) and block.get("type") == "text"
         ]
-        text = "\n".join(chunk for chunk in chunks if isinstance(chunk, str)).strip()
+        text = "\n".join(part for part in parts if isinstance(part, str)).strip()
         if required and not text:
-            raise ModelProviderError("Claude API response did not contain text")
+            raise ModelProviderError("Anthropic response did not contain text")
         return text
+
+    @staticmethod
+    def _extract_tool_calls(response: Mapping[str, Any]) -> tuple[ToolCall, ...]:
+        content = response.get("content")
+        if not isinstance(content, list):
+            raise ModelProviderError("Anthropic response is missing content")
+        calls: list[ToolCall] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "tool_use":
+                continue
+            call_id = block.get("id")
+            name = block.get("name")
+            arguments = block.get("input")
+            if (
+                not isinstance(call_id, str)
+                or not isinstance(name, str)
+                or not isinstance(arguments, dict)
+            ):
+                raise ModelProviderError("Anthropic returned malformed tool call")
+            calls.append(ToolCall(call_id=call_id, name=name, arguments=arguments))
+        return tuple(calls)
 
     @staticmethod
     def _extract_usage(response: Mapping[str, Any]) -> ModelUsage:
@@ -185,18 +187,12 @@ class AnthropicMessagesClient:
         return {
             "role": "user",
             "content": [
-                AnthropicMessagesClient._tool_result_to_api(result)
+                {
+                    "type": "tool_result",
+                    "tool_use_id": result.call_id,
+                    "content": result.content,
+                    "is_error": result.is_error,
+                }
                 for result in message.tool_results
             ],
         }
-
-    @staticmethod
-    def _tool_result_to_api(result: ToolResult) -> dict[str, object]:
-        payload: dict[str, object] = {
-            "type": "tool_result",
-            "tool_use_id": result.call_id,
-            "content": result.content,
-        }
-        if result.is_error:
-            payload["is_error"] = True
-        return payload

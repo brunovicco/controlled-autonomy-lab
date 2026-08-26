@@ -6,12 +6,9 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
 from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
-
-
-class ModelProviderError(RuntimeError):
-    """Raised when an OpenAI-compatible provider cannot return a valid turn."""
 
 
 class OpenAICompatibleChatClient:
@@ -151,6 +148,11 @@ class OpenAICompatibleChatClient:
         finally:
             connection.close()
 
+        if response.status == 429:
+            raise ModelRateLimitError(
+                f"{self._provider_label} returned HTTP 429",
+                retry_after=response.getheader("retry-after"),
+            )
         if response.status < 200 or response.status >= 300:
             raise ModelProviderError(f"{self._provider_label} returned HTTP {response.status}")
         try:

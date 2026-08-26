@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from autonomy_lab.application.comparison import (
     repeat_pattern,
     summarize_repetitions,
 )
+from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.application.model_ports import ModelClient
 from autonomy_lab.application.patterns.agent import BoundedIncidentAgent
 from autonomy_lab.application.patterns.augmented import AugmentedIncidentAnalysis
@@ -23,6 +26,7 @@ from autonomy_lab.application.patterns.evaluator_optimizer import (
 from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
 from autonomy_lab.application.patterns.routing import RoutedIncidentAnalysis
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
+from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport
 
 
 def _build_runner(
@@ -48,8 +52,32 @@ def _client_from_env() -> ModelClient:
     return client_from_env()
 
 
-def _run_payload(run: PatternRun) -> dict[str, object]:
+def _findings_payload(
+    findings: tuple[GroundingFinding, ...],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "kind": finding.kind.value,
+            "value": finding.value,
+            "context": finding.context,
+        }
+        for finding in findings
+    ]
+
+
+def _grounding_payload(report: GroundingReport) -> dict[str, object]:
     return {
+        "supported_specifics": list(report.supported_specifics),
+        "unsupported_specifics": _findings_payload(report.unsupported_specifics),
+        "proposed_specifics": _findings_payload(report.proposed_specifics),
+        "causality_overclaims": _findings_payload(report.causality_overclaims),
+        "uncertainty_preserved": report.uncertainty_preserved,
+        "specific_grounding_ratio": round(report.specific_grounding_ratio, 4),
+    }
+
+
+def _run_payload(run: PatternRun, grounding: GroundingReport | None = None) -> dict[str, object]:
+    payload: dict[str, object] = {
         "pattern": run.pattern.value,
         "incident_id": run.incident_id,
         "answer": run.answer,
@@ -60,11 +88,79 @@ def _run_payload(run: PatternRun) -> dict[str, object]:
         "output_tokens": run.usage.output_tokens,
         "latency_ms": round(run.latency_ms, 3),
     }
+    if grounding is not None:
+        payload["grounding"] = _grounding_payload(grounding)
+    return payload
 
 
-def _print_run(run: PatternRun, *, as_json: bool) -> None:
+def _run_failure_payload(
+    *,
+    pattern: AutonomyPattern,
+    incident_id: str,
+    status: str,
+    error: ModelProviderError,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "pattern": pattern.value,
+        "incident_id": incident_id,
+        "status": status,
+        "error": str(error),
+    }
+    if isinstance(error, ModelRateLimitError) and error.retry_after is not None:
+        payload["retry_after"] = error.retry_after
+    return payload
+
+
+def _print_run_failure(
+    *,
+    pattern: AutonomyPattern,
+    incident_id: str,
+    status: str,
+    error: ModelProviderError,
+    as_json: bool,
+) -> int:
+    payload = _run_failure_payload(
+        pattern=pattern,
+        incident_id=incident_id,
+        status=status,
+        error=error,
+    )
     if as_json:
-        print(json.dumps(_run_payload(run), indent=2))
+        print(json.dumps(payload, indent=2))
+    else:
+        print(f"pattern: {pattern.value}", file=sys.stderr)
+        print(f"status:  {status}", file=sys.stderr)
+        print(f"error:   {error}", file=sys.stderr)
+        retry_after = payload.get("retry_after")
+        if retry_after is not None:
+            print(f"retry after: {retry_after}", file=sys.stderr)
+    return 2
+
+
+def _print_grounding(report: GroundingReport) -> None:
+    print("\ngrounding:\n")
+    print(f"supported specifics:   {len(report.supported_specifics)}")
+    print(f"unsupported specifics: {report.unsupported_count}")
+    print(f"proposed parameters:   {report.proposed_count}")
+    print(f"causality overclaims:  {report.causality_overclaim_count}")
+    print(f"uncertainty preserved: {'yes' if report.uncertainty_preserved else 'no'}")
+    print(f"specific grounding:    {report.specific_grounding_ratio:.1%}")
+    for finding in (
+        *report.unsupported_specifics,
+        *report.proposed_specifics,
+        *report.causality_overclaims,
+    ):
+        print(f"- {finding.kind.value}: {finding.value!r} :: {finding.context}")
+
+
+def _print_run(
+    run: PatternRun,
+    *,
+    as_json: bool,
+    grounding: GroundingReport | None = None,
+) -> None:
+    if as_json:
+        print(json.dumps(_run_payload(run, grounding), indent=2))
         return
     print(f"pattern:       {run.pattern.value}")
     print(f"model calls:   {run.model_calls}")
@@ -75,11 +171,24 @@ def _print_run(run: PatternRun, *, as_json: bool) -> None:
     print(f"trajectory:    {' -> '.join(run.steps)}")
     print("\nanswer:\n")
     print(run.answer)
+    if grounding is not None:
+        _print_grounding(grounding)
 
 
 def _record_if_requested(run: PatternRun, trace_file: str | None) -> None:
     if trace_file:
         MetadataRunRecorder(Path(trace_file)).append(run)
+
+
+def _grounding_for_run(
+    run: PatternRun,
+    *,
+    store: InMemoryIncidentStore,
+    evaluator: DeterministicGroundingEvaluator,
+) -> GroundingReport:
+    incident = store.get_incident(run.incident_id)
+    evidence = store.get_evidence(incident)
+    return evaluator.evaluate(answer=run.answer, incident=incident, evidence=evidence)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -94,6 +203,11 @@ def _parser() -> argparse.ArgumentParser:
     run_parser.add_argument("pattern", choices=[pattern.value for pattern in AutonomyPattern])
     run_parser.add_argument("--incident", default="INC-001")
     run_parser.add_argument("--json", action="store_true")
+    run_parser.add_argument(
+        "--grounding",
+        action="store_true",
+        help="evaluate exact specifics and causal language against the incident fixture",
+    )
 
     compare_parser = subparsers.add_parser("compare", help="execute every pattern once")
     compare_parser.add_argument("--incident", default="INC-001")
@@ -105,6 +219,10 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
+    print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Execute the CLI and return a process exit code."""
     args = _parser().parse_args(argv)
@@ -113,22 +231,64 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run":
         pattern = AutonomyPattern(args.pattern)
-        run = _build_runner(pattern, store=store, model=model).run(args.incident)
+        try:
+            run = _build_runner(pattern, store=store, model=model).run(args.incident)
+        except ModelRateLimitError as exc:
+            return _print_run_failure(
+                pattern=pattern,
+                incident_id=args.incident,
+                status="rate_limited",
+                error=exc,
+                as_json=args.json,
+            )
+        except ModelProviderError as exc:
+            return _print_run_failure(
+                pattern=pattern,
+                incident_id=args.incident,
+                status="provider_error",
+                error=exc,
+                as_json=args.json,
+            )
         _record_if_requested(run, args.trace_file)
-        _print_run(run, as_json=args.json)
+        grounding = None
+        if args.grounding:
+            grounding = _grounding_for_run(
+                run,
+                store=store,
+                evaluator=DeterministicGroundingEvaluator(),
+            )
+        _print_run(run, as_json=args.json, grounding=grounding)
         return 0
 
     if args.command == "compare":
-        print("pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms")
-        print("-" * 82)
+        evaluator = DeterministicGroundingEvaluator()
+        had_provider_errors = False
+        print(
+            "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
+            "unsupported | proposed | causality | uncertainty | status"
+        )
+        print("-" * 145)
         for pattern in AutonomyPattern:
-            run = _build_runner(pattern, store=store, model=model).run(args.incident)
+            try:
+                run = _build_runner(pattern, store=store, model=model).run(args.incident)
+            except ModelRateLimitError:
+                had_provider_errors = True
+                _print_compare_failure(pattern, "rate_limited")
+                continue
+            except ModelProviderError:
+                had_provider_errors = True
+                _print_compare_failure(pattern, "provider_error")
+                continue
             _record_if_requested(run, args.trace_file)
+            grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
+            uncertainty = "yes" if grounding.uncertainty_preserved else "no"
             print(
                 f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
-                f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f}"
+                f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
+                f"{grounding.unsupported_count} | {grounding.proposed_count} | "
+                f"{grounding.causality_overclaim_count} | {uncertainty} | ok"
             )
-        return 0
+        return 2 if had_provider_errors else 0
 
     pattern = AutonomyPattern(args.pattern)
     runner = _build_runner(pattern, store=store, model=model)

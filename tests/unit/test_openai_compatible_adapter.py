@@ -5,17 +5,29 @@ from typing import Any
 import pytest
 
 import autonomy_lab.adapters.openai_compatible as compatible
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
 from autonomy_lab.domain.autonomy import ModelUsage
 
 
 class FakeHTTPResponse:
-    def __init__(self, payload: object, *, status: int = 200, raw: bytes | None = None) -> None:
+    def __init__(
+        self,
+        payload: object,
+        *,
+        status: int = 200,
+        raw: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.status = status
         self._raw = raw if raw is not None else json.dumps(payload).encode("utf-8")
+        self._headers = {key.lower(): value for key, value in (headers or {}).items()}
 
     def read(self) -> bytes:
         return self._raw
+
+    def getheader(self, name: str, default: str | None = None) -> str | None:
+        return self._headers.get(name.lower(), default)
 
 
 class RecordingConnection:
@@ -182,13 +194,23 @@ def test_next_turn_round_trips_function_calls(monkeypatch: pytest.MonkeyPatch) -
     }
 
 
-def test_provider_errors_are_redacted(monkeypatch: pytest.MonkeyPatch) -> None:
-    _install_connection(monkeypatch, FakeHTTPResponse({"secret": "do-not-leak"}, status=429))
+def test_rate_limit_error_is_typed_redacted_and_preserves_retry_after(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse(
+            {"secret": "do-not-leak"},
+            status=429,
+            headers={"retry-after": "7"},
+        ),
+    )
 
-    with pytest.raises(compatible.ModelProviderError, match="HTTP 429") as exc_info:
+    with pytest.raises(ModelRateLimitError, match="HTTP 429") as exc_info:
         _client().complete(system="system", prompt="prompt")
 
     assert "do-not-leak" not in str(exc_info.value)
+    assert exc_info.value.retry_after == "7"
 
 
 def test_provider_rejects_invalid_tool_argument_json(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -216,7 +238,7 @@ def test_provider_rejects_invalid_tool_argument_json(monkeypatch: pytest.MonkeyP
         ),
     )
 
-    with pytest.raises(compatible.ModelProviderError, match="arguments JSON"):
+    with pytest.raises(ModelProviderError, match="arguments JSON"):
         _client().next_turn(system="system", messages=(), tools=())
 
 
