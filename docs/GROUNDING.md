@@ -183,6 +183,20 @@ A value of `1.0` means every exact factual specific checked by v1 was supported 
 
 This ratio is deliberately not treated as a universal quality score: a vague answer can contain few checkable specifics and still obtain a high ratio.
 
+## Live calibration notes
+
+The Groq runs used to calibrate v1 produced several useful boundary cases:
+
+- `2.84 s` for fixture value `2840ms`: exact unit-equivalent, supported;
+- `~2.8 s` for fixture value `2840ms`: explicit rounded approximation, supported;
+- `2.8 s` without an approximation marker: remains an exact unsupported measurement;
+- `15-30 min` under a recommendation section: proposed parameter, not a factual hallucination;
+- `14:15` presented as the endpoint of an observed dependency window: unsupported timestamp;
+- `v2.18.3` proposed as a rollback target when the fixture never identifies that version: unsupported version;
+- `INC-884 ... root cause was an upstream timeout mismatch`: supported historical causal context because the fixture explicitly supplies that historical cause.
+
+These cases are regression-tested so future changes do not silently broaden the evaluator contract.
+
 ## What v1 does not detect
 
 Grounding Evaluation v1 is not a complete hallucination detector. It does not attempt to prove:
