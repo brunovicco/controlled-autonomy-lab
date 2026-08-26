@@ -43,8 +43,9 @@ def _grounding(run: PatternRun) -> GroundingReport:
     )
 
 
-def test_benchmark_interleaves_patterns_and_paces_between_attempts() -> None:
+def test_benchmark_rotates_patterns_and_paces_between_attempts() -> None:
     calls: list[AutonomyPattern] = []
+    successes: list[AutonomyPattern] = []
     sleeps: list[float] = []
 
     def execute(pattern: AutonomyPattern) -> PatternRun:
@@ -56,6 +57,7 @@ def test_benchmark_interleaves_patterns_and_paces_between_attempts() -> None:
         patterns=(AutonomyPattern.AUGMENTED, AutonomyPattern.AGENT),
         run_pattern=execute,
         evaluate_run=_grounding,
+        on_success=lambda run: successes.append(run.pattern),
         sleep=sleeps.append,
         now=lambda: datetime(2026, 8, 26, 13, 0, tzinfo=UTC),
     )
@@ -63,9 +65,10 @@ def test_benchmark_interleaves_patterns_and_paces_between_attempts() -> None:
     assert calls == [
         AutonomyPattern.AUGMENTED,
         AutonomyPattern.AGENT,
-        AutonomyPattern.AUGMENTED,
         AutonomyPattern.AGENT,
+        AutonomyPattern.AUGMENTED,
     ]
+    assert successes == calls
     assert sleeps == [1.5, 1.5, 1.5]
     assert len(records) == 4
     assert all(record.status is BenchmarkStatus.OK for record in records)
