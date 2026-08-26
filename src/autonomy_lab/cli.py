@@ -5,7 +5,6 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from autonomy_lab.adapters.anthropic import ModelProviderError as AnthropicProviderError
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.adapters.providers import client_from_env
 from autonomy_lab.adapters.run_log import MetadataRunRecorder
@@ -74,6 +73,7 @@ def _grounding_payload(report: GroundingReport) -> dict[str, object]:
         "uncertainty_preserved": report.uncertainty_preserved,
         "specific_grounding_ratio": round(report.specific_grounding_ratio, 4),
     }
+
 
 def _run_payload(run: PatternRun, grounding: GroundingReport | None = None) -> dict[str, object]:
     payload: dict[str, object] = {
@@ -174,9 +174,10 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-
 def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
     print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Execute the CLI and return a process exit code."""
     args = _parser().parse_args(argv)
@@ -198,34 +199,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "compare":
-    evaluator = DeterministicGroundingEvaluator()
-    had_provider_errors = False
-    print(
-        "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
-        "unsupported | proposed | causality | uncertainty | status"
-    )
-    print("-" * 145)
-    for pattern in AutonomyPattern:
-        try:
-            run = _build_runner(pattern, store=store, model=model).run(args.incident)
-        except ModelRateLimitError:
-            had_provider_errors = True
-            _print_compare_failure(pattern, "rate_limited")
-            continue
-        except (ModelProviderError, AnthropicProviderError):
-            had_provider_errors = True
-            _print_compare_failure(pattern, "provider_error")
-            continue
-        _record_if_requested(run, args.trace_file)
-        grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
-        uncertainty = "yes" if grounding.uncertainty_preserved else "no"
+        evaluator = DeterministicGroundingEvaluator()
+        had_provider_errors = False
         print(
-            f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
-            f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
-            f"{grounding.unsupported_count} | {grounding.proposed_count} | "
-            f"{grounding.causality_overclaim_count} | {uncertainty} | ok"
+            "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
+            "unsupported | proposed | causality | uncertainty | status"
         )
-    return 2 if had_provider_errors else 0
+        print("-" * 145)
+        for pattern in AutonomyPattern:
+            try:
+                run = _build_runner(pattern, store=store, model=model).run(args.incident)
+            except ModelRateLimitError:
+                had_provider_errors = True
+                _print_compare_failure(pattern, "rate_limited")
+                continue
+            except ModelProviderError:
+                had_provider_errors = True
+                _print_compare_failure(pattern, "provider_error")
+                continue
+            _record_if_requested(run, args.trace_file)
+            grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
+            uncertainty = "yes" if grounding.uncertainty_preserved else "no"
+            print(
+                f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
+                f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
+                f"{grounding.unsupported_count} | {grounding.proposed_count} | "
+                f"{grounding.causality_overclaim_count} | {uncertainty} | ok"
+            )
+        return 2 if had_provider_errors else 0
+
     pattern = AutonomyPattern(args.pattern)
     runner = _build_runner(pattern, store=store, model=model)
     results = repeat_pattern(runner, incident_id=args.incident, runs=args.runs)
