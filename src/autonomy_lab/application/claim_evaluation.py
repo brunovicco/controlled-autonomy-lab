@@ -21,12 +21,13 @@ _HYPOTHESIS_HEADING_RE = re.compile(
 )
 _INFERENCE_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
-    r"suggests?\b|consistent with|supports?\b|correlat\w*|interaction)\b",
+    r"suggests?\b|consistent with|supports?\b|correlat\w*|interaction|"
+    r"no confirmed|not confirmed|unconfirmed|no evidence)\b",
     re.IGNORECASE,
 )
 _IMPERATIVE_RE = re.compile(
     r"^(?:compare|check|monitor|collect|inspect|validate|confirm|consider|prefer|"
-    r"route|restore|revert|roll back|rollback|temporarily|escalate|review|measure)\b",
+    r"route|restore|revert|roll back|rollback|temporarily|escalate|review|measure|continue)\b",
     re.IGNORECASE,
 )
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
@@ -64,6 +65,7 @@ _STOPWORDS = {
 class _ClaimCandidate:
     text: str
     heading: str
+    list_item: bool
 
 
 def _heading_title(line: str) -> str | None:
@@ -88,13 +90,20 @@ def _extract_claims(answer: str) -> tuple[_ClaimCandidate, ...]:
         if title is not None:
             heading = title
             continue
+        list_item = _LIST_PREFIX_RE.match(stripped) is not None
         content = _LIST_PREFIX_RE.sub("", stripped).strip()
         if not content:
             continue
         for sentence in _SENTENCE_BOUNDARY_RE.split(content):
             claim = sentence.strip()
             if claim:
-                claims.append(_ClaimCandidate(text=claim, heading=heading))
+                claims.append(
+                    _ClaimCandidate(
+                        text=claim,
+                        heading=heading,
+                        list_item=list_item,
+                    )
+                )
     return tuple(claims)
 
 
@@ -137,9 +146,8 @@ def _is_direct_textual_support(
 
 
 def _is_proposed(candidate: _ClaimCandidate) -> bool:
-    return bool(
-        _PROPOSAL_HEADING_RE.search(candidate.heading) or _IMPERATIVE_RE.match(candidate.text)
-    )
+    section_action = bool(_PROPOSAL_HEADING_RE.search(candidate.heading)) and candidate.list_item
+    return bool(section_action or _IMPERATIVE_RE.match(candidate.text))
 
 
 def _is_inference(candidate: _ClaimCandidate) -> bool:
