@@ -198,10 +198,7 @@ def _print_claim_evaluation(report: ClaimEvaluationReport) -> None:
     print(f"claim support:         {report.support_ratio:.1%}")
     for claim in report.claims:
         sources = ",".join(claim.evidence_sources) or "-"
-        print(
-            f"- {claim.kind.value}: {claim.claim!r} "
-            f"[{claim.rationale}; sources={sources}]"
-        )
+        print(f"- {claim.kind.value}: {claim.claim!r} [{claim.rationale}; sources={sources}]")
 
 
 def _print_run(
