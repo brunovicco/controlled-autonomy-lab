@@ -5,8 +5,8 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from autonomy_lab.application.model_errors import ModelProviderError
-from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.application.model_errors import ModelProviderError as ModelProviderError
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolSpec
 from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
 
 _API_HOST = "api.anthropic.com"
@@ -73,6 +73,7 @@ class AnthropicMessagesClient:
                 }
                 for tool in tools
             ],
+            "tool_choice": {"type": "auto"},
         }
         response = self._post(body)
         return AgentTurn(
@@ -143,7 +144,11 @@ class AnthropicMessagesClient:
             call_id = block.get("id")
             name = block.get("name")
             arguments = block.get("input")
-            if not isinstance(call_id, str) or not isinstance(name, str) or not isinstance(arguments, dict):
+            if (
+                not isinstance(call_id, str)
+                or not isinstance(name, str)
+                or not isinstance(arguments, dict)
+            ):
                 raise ModelProviderError("Anthropic returned malformed tool call")
             calls.append(ToolCall(call_id=call_id, name=name, arguments=arguments))
         return tuple(calls)
