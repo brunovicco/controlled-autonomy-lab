@@ -7,7 +7,12 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
-from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkRecord, PatternBenchmarkSummary
+from autonomy_lab.domain.benchmark import (
+    BenchmarkConfig,
+    BenchmarkRecord,
+    BenchmarkStatus,
+    PatternBenchmarkSummary,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +195,8 @@ def _summary_markdown(
     records: tuple[BenchmarkRecord, ...],
     summaries: tuple[PatternBenchmarkSummary, ...],
 ) -> str:
-    partial = any(record.status.value != "ok" for record in records)
+    partial = any(record.status is not BenchmarkStatus.OK for record in records)
+    rate_limited = any(record.status is BenchmarkStatus.RATE_LIMITED for record in records)
     reasoning = config.reasoning_effort or "default/provider-defined"
     lines = [
         "# Reproducible Benchmark Summary",
@@ -211,13 +217,28 @@ def _summary_markdown(
             "calls inside a pattern; parallel fan-out remains concurrent and multi-call "
             "patterns retain their original behavior."
         ),
-        "",
-        (
-            "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Unsupported "
-            "| Proposed | Causality | Grounding | Rate limited | Trajectories |"
-        ),
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
+    if rate_limited:
+        lines.extend(
+            [
+                "",
+                (
+                    "Rate limits occurred in this experiment. Keep them as benchmark evidence; "
+                    "for a separate experiment, increase the attempt interval rather than "
+                    "rerunning only the missing patterns."
+                ),
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            (
+                "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Unsupported "
+                "| Proposed | Causality | Grounding | Rate limited | Trajectories |"
+            ),
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
     for summary in summaries:
         lines.append(
             "| "
