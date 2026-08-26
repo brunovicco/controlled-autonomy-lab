@@ -17,6 +17,7 @@ from autonomy_lab.domain.grounding import GroundingReport
 
 RunPattern = Callable[[AutonomyPattern], PatternRun]
 EvaluateRun = Callable[[PatternRun], GroundingReport]
+OnSuccess = Callable[[PatternRun], None]
 Sleep = Callable[[float], None]
 Now = Callable[[], datetime]
 
@@ -31,6 +32,7 @@ def run_benchmark(
     patterns: Sequence[AutonomyPattern],
     run_pattern: RunPattern,
     evaluate_run: EvaluateRun,
+    on_success: OnSuccess | None = None,
     sleep: Sleep = time.sleep,
     now: Now = _utc_now,
 ) -> tuple[BenchmarkRecord, ...]:
@@ -72,6 +74,8 @@ def run_benchmark(
                 )
                 continue
 
+            if on_success is not None:
+                on_success(run)
             grounding = evaluate_run(run)
             records.append(
                 BenchmarkRecord(
@@ -212,7 +216,11 @@ def _mean_total_tokens(records: Sequence[BenchmarkRecord]) -> float | None:
 
 
 def _uncertainty_rate(records: Sequence[BenchmarkRecord]) -> float | None:
-    values = [record.uncertainty_preserved for record in records if record.uncertainty_preserved is not None]
+    values = [
+        record.uncertainty_preserved
+        for record in records
+        if record.uncertainty_preserved is not None
+    ]
     if not values:
         return None
     return sum(values) / len(values)
