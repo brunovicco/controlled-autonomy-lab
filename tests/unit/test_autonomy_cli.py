@@ -73,8 +73,24 @@ def test_run_command_supports_json_and_metadata_trace(
     payload = json.loads(capsys.readouterr().out)
     assert payload["pattern"] == "augmented"
     assert payload["answer"] == "grounded answer"
+    assert "grounding" not in payload
     trace = json.loads(trace_file.read_text(encoding="utf-8"))
     assert "answer" not in trace
+
+
+def test_run_command_can_emit_grounding_report_in_json(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+
+    assert cli.main(["run", "augmented", "--grounding", "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    grounding = payload["grounding"]
+    assert grounding["unsupported_specifics"] == []
+    assert grounding["causality_overclaims"] == []
+    assert grounding["specific_grounding_ratio"] == 1.0
 
 
 def test_run_command_supports_human_output(
@@ -83,15 +99,17 @@ def test_run_command_supports_human_output(
 ) -> None:
     _patch_live_dependencies(monkeypatch)
 
-    assert cli.main(["run", "agent"]) == 0
+    assert cli.main(["run", "agent", "--grounding"]) == 0
 
     output = capsys.readouterr().out
     assert "pattern:       agent" in output
     assert "trajectory:    inspect -> final-answer" in output
     assert "grounded answer" in output
+    assert "grounding:" in output
+    assert "unsupported specifics: 0" in output
 
 
-def test_compare_runs_every_pattern(
+def test_compare_runs_every_pattern_with_grounding_columns(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -100,6 +118,7 @@ def test_compare_runs_every_pattern(
     assert cli.main(["compare", "--incident", "INC-001"]) == 0
 
     output = capsys.readouterr().out
+    assert "unsupported | causality | uncertainty" in output
     for pattern in AutonomyPattern:
         assert pattern.value in output
 
