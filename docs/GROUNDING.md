@@ -14,7 +14,8 @@ The first version intentionally favors checks that are explainable and reproduci
 
 - semantic versions such as `v2.18.4`;
 - timestamps such as `14:10`;
-- measurements and durations such as `2840ms`, `8.7%`, `3 s`, or `30-60 min`;
+- measurements and durations such as `2840ms`, `2.84 s`, `8.7%`, `3 s`, or `30-60 min`;
+- exact seconds-to-milliseconds equivalence for scalar time measurements;
 - percentage-point deltas that can be derived exactly from fixture percentages;
 - strong causal language without local or section-level uncertainty qualifiers;
 - whether the answer preserves explicit uncertainty language;
@@ -35,17 +36,22 @@ Timestamp spans are excluded from measurement parsing. This prevents text such a
 Examples:
 
 ```text
-v2.18.4      -> supported
-v2.18.3      -> unsupported-version
-2840ms       -> supported
-2 840 ms     -> supported after Unicode normalization
-1250ms       -> unsupported-measurement
+v2.18.4       -> supported
+v2.18.3       -> unsupported-version
+2840ms        -> supported
+2 840 ms      -> supported after Unicode normalization
+2.84 s        -> supported because it is exactly 2840 ms
+1250ms        -> unsupported-measurement
 "p95 was 1 s" -> unsupported-measurement
 "alert if p95 > 1 s" under Recommended next steps -> proposed-parameter
-8.5 pp       -> supported because 8.7% - 0.2% = 8.5 percentage points
+8.5 pp        -> supported because 8.7% - 0.2% = 8.5 percentage points
 ```
 
+The unit normalization is deliberately narrow in v1: scalar seconds are canonicalized to milliseconds so equivalent representations can be compared exactly. It is not a general unit-conversion engine.
+
 Concrete semantic versions remain checkable even inside recommendations. For example, `roll back to v2.18.3` is still reported when the fixture never identifies `v2.18.3` as an available previous release.
+
+Likewise, an invented observation-window endpoint remains a factual finding. If the fixture only says that dependency latency increased shortly after `14:00`, an answer that presents `14:00-14:15` as the observed interval introduces the unsupported endpoint `14:15`.
 
 The evaluator deduplicates repeated unsupported specifics so one invented value repeated multiple times does not artificially inflate the score.
 
@@ -53,12 +59,12 @@ The evaluator deduplicates repeated unsupported specifics so one invented value 
 
 A benchmark should not treat every new number as a hallucinated fact. A model may legitimately propose a reversible monitoring window or alert threshold that is not part of the incident evidence.
 
-Grounding Evaluation v1 therefore uses Markdown section structure as a deterministic signal. Under headings such as `Recommended next steps`, `Actions`, `Plan`, `Checks`, `Mitigation`, or `Remediation`, new times and measurements are classified as `proposed-parameter`.
+Grounding Evaluation v1 therefore uses section structure as a deterministic signal. It recognizes normal Markdown headings such as `## Recommended next steps` and bold-only section labels such as `**Recommended next steps (all reversible)**`. Under headings such as `Recommended next steps`, `Actions`, `Plan`, `Checks`, `Mitigation`, or `Remediation`, new times and measurements are classified as `proposed-parameter`.
 
 For example:
 
 ```text
-## Recommended next steps
+**Recommended next steps (all reversible)**
 Monitor for 15-30 minutes.
 Alert if error rate exceeds 5%.
 ```
@@ -107,6 +113,19 @@ JSON output includes a structured grounding report:
 ```bash
 uv run autonomy-lab run agent --incident INC-001 --grounding --json
 ```
+
+A provider failure in a single `run` is returned without a Python traceback. A rate-limited JSON run returns exit code `2` and a structured result such as:
+
+```json
+{
+  "pattern": "agent",
+  "incident_id": "INC-001",
+  "status": "rate_limited",
+  "error": "Groq API returned HTTP 429"
+}
+```
+
+If the provider supplies a safe `Retry-After` header, the JSON also includes `retry_after`. Human-readable runs report the same failure concisely on stderr.
 
 `compare` evaluates grounding for every architecture automatically:
 
