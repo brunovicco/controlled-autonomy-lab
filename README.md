@@ -1,93 +1,133 @@
 # Controlled Autonomy Lab
 
-> Same incident. Different levels of LLM autonomy.
+> Same incident. Different levels of LLM autonomy. Multiple providers.
 
-Controlled Autonomy Lab is a compact reference implementation for comparing six common LLM application architectures against the same production-incident fixture.
+Controlled Autonomy Lab is a small Python reference implementation for comparing six architectures on the same production incident:
 
-The experiment asks one question:
+1. Augmented LLM
+2. Prompt chaining
+3. Routing
+4. Parallelization
+5. Evaluator-optimizer
+6. Bounded tool-using agent
 
-> Who owns the next step: deterministic application code or the model?
+The goal is not to prove that agents are better. It is to make the delegation boundary observable: **who owns the next step, deterministic application code or the model?**
 
-The repository focuses on control flow, evidence grounding, provider behavior, tool use and reproducible measurements rather than on framework-specific abstractions.
+The comparison also includes a deterministic grounding signal so model/tool calls, token use and latency can be viewed alongside unsupported factual specifics, proposed action parameters, causal overclaims and uncertainty preservation.
 
-## The six patterns
+## Provider support
 
-The same incident is analyzed through six architectures inspired by Anthropic's [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents):
+The architecture is provider-neutral. The project includes three transport adapters:
 
-1. **Augmented LLM** — one model call with deterministic evidence augmentation.
-2. **Prompt chaining** — deterministic application code owns a multi-stage sequence.
-3. **Routing** — a model chooses a bounded route; application code executes the selected branch.
-4. **Parallelization** — independent model calls fan out concurrently and deterministic code synthesizes the result.
-5. **Evaluator-optimizer** — one model drafts and another evaluates/refines inside a bounded loop.
-6. **Bounded tool-using agent** — the model chooses which read-only evidence tool to call next, inside hard step/tool budgets.
+- native Anthropic Messages API;
+- native OpenAI Responses API;
+- OpenAI-compatible Chat Completions + function calling for Groq, OpenRouter and custom endpoints.
 
-The point is not to declare one architecture universally superior. The lab makes their trade-offs measurable.
+Presets are available for:
 
-## Incident fixture
+| Provider | `LLM_PROVIDER` | Default model | Cost path |
+| --- | --- | --- | --- |
+| Anthropic | `anthropic` | `claude-sonnet-5` | paid API |
+| OpenAI | `openai` | `gpt-5.6-luna` | paid API |
+| Groq | `groq` | `openai/gpt-oss-20b` | Free Plan available |
+| OpenRouter | `openrouter` | `openrouter/free` | free router |
+| Custom OpenAI-compatible | `custom` | user-defined | provider-dependent |
 
-All patterns investigate the same fixture, `INC-001`, for `checkout-api`:
+OpenAI uses `/v1/responses` for both text and tool-use calls. The adapter sets `store=false`; during a bounded agent run it keeps returned Responses output items only in memory so opaque reasoning items can be replayed with subsequent function outputs. Provider-specific reasoning state does not enter the domain model or benchmark artifacts.
 
-- HTTP 5xx increases from `0.2%` to `8.7%`;
-- p95 latency increases from `310 ms` to `2840 ms`;
-- deployment `v2.18.4` occurred shortly before the incident;
-- payment-provider latency increased shortly after `14:00`;
-- there is no confirmed dependency outage;
-- the runbook explicitly warns that correlation is not proof of causality.
+**Recommended zero-cost starting point:** OpenRouter's `openrouter/free`. It routes requests among currently available free models. Availability, rate limits, model selection, and provider policies can change over time, so free access is intentionally configuration rather than a project invariant.
 
-The fixture is intentionally small and bounded so architectural differences are easier to observe.
+Groq is a second free-to-start option through its Free Plan. For the agent pattern, use a model/provider combination that supports tool/function calling.
 
-## Agent boundaries
+See [`docs/PROVIDERS.md`](docs/PROVIDERS.md) for setup details and official provider references.
 
-The bounded agent can only call these read-only tools:
+## Quick start with a free provider
 
-```text
-get_service_metrics
-get_recent_deployments
-get_dependencies
-search_runbook
-get_previous_incidents
+Requirements: Python 3.13/3.14 and `uv`.
+
+```bash
+uv sync --frozen --all-groups
+
+export LLM_PROVIDER=openrouter
+export OPENROUTER_API_KEY="..."
+export OPENROUTER_MODEL=openrouter/free
+
+uv run autonomy-lab run augmented --incident INC-001
 ```
 
-Hard limits:
+Try the bounded agent with the same provider configuration:
 
-```text
-max_steps = 6
-max_tool_calls = 8
+```bash
+uv run autonomy-lab run agent --incident INC-001
 ```
 
-The agent cannot execute shell commands, restart services, rollback deployments, mutate configuration or write to production systems.
+The equivalent module form is also supported:
 
-## Provider-neutral runtime
-
-The application layer depends on provider-neutral text/tool-use ports. Provider transport remains in adapters.
-
-Supported providers:
-
-```text
-anthropic
-openai
-groq
-openrouter
-custom
+```bash
+uv run python -m autonomy_lab.cli run augmented --incident INC-001
 ```
 
-OpenAI uses the native **Responses API** for both text and tool-use calls. The adapter sets `store=false`; during a bounded agent run it keeps returned Responses output items only in memory so opaque reasoning items can be replayed with subsequent function outputs. This preserves reasoning continuity without placing provider-specific state in the domain model or persisting prompts/model output in benchmark artifacts.
-
-Groq, OpenRouter and custom OpenAI-compatible endpoints continue to use the generic Chat Completions adapter. Anthropic uses the native Messages API adapter.
-
-Example environment:
+Or use Groq's Free Plan:
 
 ```bash
 export LLM_PROVIDER=groq
-export GROQ_API_KEY=...
+export GROQ_API_KEY="..."
 export GROQ_MODEL=openai/gpt-oss-20b
-export LLM_MAX_TOKENS=1200
-export LLM_TIMEOUT_SECONDS=30
 ```
 
-Provider failures are normalized to `ModelProviderError`; HTTP 429 becomes `ModelRateLimitError` with a safe `Retry-After` hint when available. Provider error details are bounded and sanitized before they can enter benchmark metadata.
+`.env.example` is a reference file; the application intentionally does not auto-load `.env` files or add a dotenv dependency. Export variables in your shell or use your preferred secret/configuration mechanism.
 
-No adapter performs automatic retries. Hidden retries would change latency and quota behavior and therefore distort the experiment.
+## Switch providers without changing application code
+
+Anthropic:
+
+```bash
+export LLM_PROVIDER=anthropic
+export ANTHROPIC_API_KEY="..."
+export CLAUDE_MODEL=claude-sonnet-5
+```
+
+OpenAI:
+
+```bash
+export LLM_PROVIDER=openai
+export OPENAI_API_KEY="..."
+export OPENAI_MODEL=gpt-5.6-luna
+```
+
+Any compatible HTTPS endpoint:
+
+```bash
+export LLM_PROVIDER=custom
+export OPENAI_COMPAT_API_KEY="..."
+export OPENAI_COMPAT_BASE_URL="https://provider.example/v1"
+export OPENAI_COMPAT_MODEL="provider-model"
+```
+
+The custom adapter expects compatible `/chat/completions` semantics and function/tool calling for the agent pattern.
+
+## The common incident
+
+Every pattern receives `INC-001`:
+
+- service: `checkout-api`;
+- HTTP 5xx rises from `0.2%` to `8.7%`;
+- p95 latency rises from `310ms` to `2840ms`;
+- `v2.18.4` was deployed seven minutes before the incident;
+- an upstream payment provider also shows increased latency.
+
+The fixture creates correlation without proving causality. Good output should distinguish observed facts from hypotheses.
+
+## Control model
+
+| Pattern | Who owns the path? | Model calls | Tool use | Main guard |
+| --- | --- | ---: | ---: | --- |
+| Augmented LLM | application | 1 | no | one bounded call |
+| Chaining | application | 3 | no | fixed handoffs |
+| Routing | application + classifier | 2 | no | route allowlist |
+| Parallelization | application | 4 | no | fixed fan-out/fan-in |
+| Evaluator-optimizer | application | variable | no | schema + revision budget |
+| Agent | model | variable | yes | tool allowlist + step/tool budgets |
 
 ## Architecture
 
@@ -105,7 +145,7 @@ src/autonomy_lab/
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
 │   ├── anthropic.py
-│   ├── openai_responses.py # native OpenAI Responses transport
+│   ├── openai_responses.py
 │   ├── openai_compatible.py
 │   ├── providers.py        # environment composition/presets
 │   ├── incidents.py
@@ -202,29 +242,40 @@ It currently checks:
 - exact percentage-point deltas derivable from fixture percentages;
 - timestamp-to-measurement associations in supported Markdown table structures;
 - strong causal language without a local or section-level uncertainty qualifier;
-- explicit uncertainty language;
-- proposal sections so proposed operational thresholds are not mislabeled as factual claims;
-- supported historical causal context.
+- explicit preservation of uncertainty;
+- proposal sections, where new time/measurement values are tracked as `proposed-parameter` instead of being counted as unsupported facts.
 
-The evaluator deliberately remains narrow. It is not a general semantic fact checker or NLI model.
+The parser excludes timestamp spans from measurement detection, so text such as `13:55 % 5xx = 0.2 %` cannot accidentally create a `55%` finding.
 
-See [`docs/GROUNDING.md`](docs/GROUNDING.md).
+This makes observed failures such as an invented previous release or latency measurement visible while keeping new monitoring windows and alert thresholds distinct from factual hallucinations.
 
-## Metadata-only observability
+It is intentionally **not** a universal hallucination detector. A `100%` specific-grounding ratio means that the exact factual specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct. Proposed action parameters are visible but excluded from that factual ratio.
 
-Optional traces record only run metadata such as:
+See [`docs/GROUNDING.md`](docs/GROUNDING.md) for methodology, examples, limitations, partial-benchmark behavior and the trace boundary.
+
+## Agent authority boundary
+
+The agent can call only five read-only tools:
 
 ```text
-pattern
-incident_id
-model_calls
-tool_calls
-steps
-token counts
-latency
+get_service_metrics
+get_recent_deployments
+get_dependencies
+search_runbook
+get_previous_incidents
 ```
 
-Prompts, answers, evidence bodies, tool arguments/results and credentials are deliberately excluded.
+Deterministic code enforces `max_steps=6`, `max_tool_calls=8`, the exact tool-name allowlist and active-incident scope. There is no shell, restart, rollback, configuration mutation, or production write tool.
+
+## Metadata-only traces
+
+```bash
+uv run autonomy-lab \
+  --trace-file traces/runs.jsonl \
+  repeat agent --runs 5
+```
+
+The trace contains pattern, incident id, model/tool call counts, trajectory, token counts and latency. It deliberately excludes prompts, model answers, evidence content, tool arguments/results and credentials. Grounding findings are not persisted in this metadata-only trace because they are derived from answer content.
 
 ## Quality gate
 
@@ -232,18 +283,25 @@ Prompts, answers, evidence bodies, tool arguments/results and credentials are de
 uv run python scripts/quality_gate.py
 ```
 
-The gate checks lock consistency, Ruff lint/format, architecture rules, MyPy, Pytest with coverage, Bandit and dependency vulnerabilities.
+The retained gate checks lock consistency, Ruff, formatting, architecture boundaries, Mypy, Pytest/coverage, Bandit and dependency vulnerabilities.
 
-## What this lab is for
+## Claude Skill
 
-The project is designed as a small empirical case for reasoning about questions such as:
+Only the project-specific `.claude/skills/incident-analysis/SKILL.md` is retained. Generic harness agents, hooks, MCP skills and workflow scaffolding were removed because they are not runtime requirements for this case.
 
-- How much additional latency and token use does extra autonomy introduce?
-- Does a more autonomous architecture produce better-grounded answers?
-- Does parallel fan-out reduce latency enough to justify extra tokens?
-- Does evaluator-optimizer actually improve factual quality?
-- Does an agent gather enough evidence before answering?
-- How often do providers fail or rate-limit different architectural shapes?
-- Does the model preserve uncertainty or overstate causality?
+## Why `a2a-otel-kit` is still not wired in
 
-The intent is to replace architecture-by-fashion with architecture-by-evidence.
+There is still no real A2A/MCP/distributed-process boundary. Adding protocol infrastructure now would obscure the architecture comparison. If a later phase moves the evaluator, evidence provider or another agent to a separate process, [`a2a-otel-kit`](https://github.com/brunovicco/a2a-otel-kit) becomes useful for W3C trace-context propagation and metadata-only OTLP spans.
+
+## References
+
+- [Anthropic — Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [Anthropic — Messages API](https://platform.claude.com/docs/en/api/messages/create)
+- [OpenAI — Responses API](https://developers.openai.com/api/docs/guides/reasoning)
+- [OpenAI — Function calling](https://developers.openai.com/api/docs/guides/function-calling)
+- [OpenAI — Models](https://developers.openai.com/api/docs/models)
+- [OpenRouter — Free Models Router](https://openrouter.ai/docs/guides/routing/routers/free-models-router)
+- [Groq — OpenAI Compatibility](https://console.groq.com/docs/openai)
+- [Groq — Rate limits](https://console.groq.com/docs/rate-limits)
+- [Claude Python Engineering Harness](https://github.com/brunovicco/claude-python-engineering-harness)
+- [a2a-otel-kit](https://github.com/brunovicco/a2a-otel-kit)
