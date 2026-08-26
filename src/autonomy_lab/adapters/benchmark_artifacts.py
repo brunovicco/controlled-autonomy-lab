@@ -7,11 +7,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
-from autonomy_lab.domain.benchmark import (
-    BenchmarkConfig,
-    BenchmarkRecord,
-    PatternBenchmarkSummary,
-)
+from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkRecord, PatternBenchmarkSummary
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,31 +19,51 @@ class BenchmarkArtifacts:
     summary_markdown: Path
 
 
+def benchmark_artifact_paths(output_dir: Path) -> BenchmarkArtifacts:
+    """Return the canonical benchmark artifact paths for one output directory."""
+    return BenchmarkArtifacts(
+        runs_jsonl=output_dir / "runs.jsonl",
+        summary_csv=output_dir / "summary.csv",
+        summary_markdown=output_dir / "summary.md",
+    )
+
+
+def assert_benchmark_output_available(output_dir: Path, *, overwrite: bool = False) -> None:
+    """Fail before provider calls when benchmark output would be overwritten."""
+    if overwrite:
+        return
+    artifacts = benchmark_artifact_paths(output_dir)
+    existing = [
+        path
+        for path in (artifacts.runs_jsonl, artifacts.summary_csv, artifacts.summary_markdown)
+        if path.exists()
+    ]
+    if existing:
+        names = ", ".join(path.name for path in existing)
+        raise FileExistsError(f"benchmark output already exists: {names}; use --overwrite")
+
+
 def write_benchmark_artifacts(
     *,
     output_dir: Path,
     config: BenchmarkConfig,
     records: tuple[BenchmarkRecord, ...],
     summaries: tuple[PatternBenchmarkSummary, ...],
+    overwrite: bool = False,
 ) -> BenchmarkArtifacts:
     """Persist metadata-only raw records plus machine- and human-readable summaries."""
+    assert_benchmark_output_available(output_dir, overwrite=overwrite)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_path = output_dir / "runs.jsonl"
-    csv_path = output_dir / "summary.csv"
-    markdown_path = output_dir / "summary.md"
+    artifacts = benchmark_artifact_paths(output_dir)
 
     jsonl = "".join(f"{json.dumps(_record_payload(record), sort_keys=True)}\n" for record in records)
-    _atomic_write(runs_path, jsonl)
-    _atomic_write(csv_path, _summary_csv(config=config, summaries=summaries))
+    _atomic_write(artifacts.runs_jsonl, jsonl)
+    _atomic_write(artifacts.summary_csv, _summary_csv(config=config, summaries=summaries))
     _atomic_write(
-        markdown_path,
+        artifacts.summary_markdown,
         _summary_markdown(config=config, records=records, summaries=summaries),
     )
-    return BenchmarkArtifacts(
-        runs_jsonl=runs_path,
-        summary_csv=csv_path,
-        summary_markdown=markdown_path,
-    )
+    return artifacts
 
 
 def _record_payload(record: BenchmarkRecord) -> dict[str, Any]:
@@ -80,133 +96,77 @@ def _record_payload(record: BenchmarkRecord) -> dict[str, Any]:
     }
 
 
-def _summary_csv(
-    *,
-    config: BenchmarkConfig,
-    summaries: tuple[PatternBenchmarkSummary, ...],
-) -> str:
+def _summary_csv(*, config: BenchmarkConfig, summaries: tuple[PatternBenchmarkSummary, ...]) -> str:
     fieldnames = [
-        "git_commit",
-        "provider",
-        "model",
-        "incident_id",
-        "runs",
-        "run_interval_seconds",
-        "pattern",
-        "attempted",
-        "completed",
-        "rate_limited",
-        "provider_errors",
-        "completion_rate",
-        "rate_limit_rate",
-        "provider_error_rate",
-        "mean_model_calls",
-        "mean_tool_calls",
-        "mean_input_tokens",
-        "mean_output_tokens",
-        "mean_total_tokens",
-        "p50_latency_ms",
-        "mean_unsupported",
-        "mean_proposed",
-        "mean_causality_overclaims",
-        "mean_grounding_ratio",
-        "uncertainty_preservation_rate",
-        "unique_trajectories",
+        "git_commit", "provider", "model", "incident_id", "runs", "run_interval_seconds",
+        "pattern", "attempted", "completed", "rate_limited", "provider_errors",
+        "completion_rate", "rate_limit_rate", "provider_error_rate", "mean_model_calls",
+        "mean_tool_calls", "mean_input_tokens", "mean_output_tokens", "mean_total_tokens",
+        "p50_latency_ms", "mean_unsupported", "mean_proposed", "mean_causality_overclaims",
+        "mean_grounding_ratio", "uncertainty_preservation_rate", "unique_trajectories",
     ]
     buffer = StringIO()
     writer = csv.DictWriter(buffer, fieldnames=fieldnames, lineterminator="\n")
     writer.writeheader()
     for summary in summaries:
-        writer.writerow(
-            {
-                "git_commit": config.git_commit,
-                "provider": config.provider,
-                "model": config.model,
-                "incident_id": config.incident_id,
-                "runs": config.runs,
-                "run_interval_seconds": config.run_interval_seconds,
-                "pattern": summary.pattern.value,
-                "attempted": summary.attempted,
-                "completed": summary.completed,
-                "rate_limited": summary.rate_limited,
-                "provider_errors": summary.provider_errors,
-                "completion_rate": _csv_number(summary.completion_rate),
-                "rate_limit_rate": _csv_number(summary.rate_limit_rate),
-                "provider_error_rate": _csv_number(summary.provider_error_rate),
-                "mean_model_calls": _csv_number(summary.mean_model_calls),
-                "mean_tool_calls": _csv_number(summary.mean_tool_calls),
-                "mean_input_tokens": _csv_number(summary.mean_input_tokens),
-                "mean_output_tokens": _csv_number(summary.mean_output_tokens),
-                "mean_total_tokens": _csv_number(summary.mean_total_tokens),
-                "p50_latency_ms": _csv_number(summary.p50_latency_ms),
-                "mean_unsupported": _csv_number(summary.mean_unsupported),
-                "mean_proposed": _csv_number(summary.mean_proposed),
-                "mean_causality_overclaims": _csv_number(summary.mean_causality_overclaims),
-                "mean_grounding_ratio": _csv_number(summary.mean_grounding_ratio),
-                "uncertainty_preservation_rate": _csv_number(
-                    summary.uncertainty_preservation_rate
-                ),
-                "unique_trajectories": summary.unique_trajectories,
-            }
-        )
+        writer.writerow({
+            "git_commit": config.git_commit,
+            "provider": config.provider,
+            "model": config.model,
+            "incident_id": config.incident_id,
+            "runs": config.runs,
+            "run_interval_seconds": config.run_interval_seconds,
+            "pattern": summary.pattern.value,
+            "attempted": summary.attempted,
+            "completed": summary.completed,
+            "rate_limited": summary.rate_limited,
+            "provider_errors": summary.provider_errors,
+            "completion_rate": _csv_number(summary.completion_rate),
+            "rate_limit_rate": _csv_number(summary.rate_limit_rate),
+            "provider_error_rate": _csv_number(summary.provider_error_rate),
+            "mean_model_calls": _csv_number(summary.mean_model_calls),
+            "mean_tool_calls": _csv_number(summary.mean_tool_calls),
+            "mean_input_tokens": _csv_number(summary.mean_input_tokens),
+            "mean_output_tokens": _csv_number(summary.mean_output_tokens),
+            "mean_total_tokens": _csv_number(summary.mean_total_tokens),
+            "p50_latency_ms": _csv_number(summary.p50_latency_ms),
+            "mean_unsupported": _csv_number(summary.mean_unsupported),
+            "mean_proposed": _csv_number(summary.mean_proposed),
+            "mean_causality_overclaims": _csv_number(summary.mean_causality_overclaims),
+            "mean_grounding_ratio": _csv_number(summary.mean_grounding_ratio),
+            "uncertainty_preservation_rate": _csv_number(summary.uncertainty_preservation_rate),
+            "unique_trajectories": summary.unique_trajectories,
+        })
     return buffer.getvalue()
 
 
 def _summary_markdown(
-    *,
-    config: BenchmarkConfig,
-    records: tuple[BenchmarkRecord, ...],
-    summaries: tuple[PatternBenchmarkSummary, ...],
+    *, config: BenchmarkConfig, records: tuple[BenchmarkRecord, ...], summaries: tuple[PatternBenchmarkSummary, ...]
 ) -> str:
     partial = any(record.status.value != "ok" for record in records)
     reasoning = config.reasoning_effort or "default/provider-defined"
     lines = [
-        "# Reproducible Benchmark Summary",
-        "",
-        f"- Git commit: `{config.git_commit}`",
-        f"- Provider: `{config.provider}`",
-        f"- Model: `{config.model}`",
-        f"- Incident: `{config.incident_id}`",
-        f"- Repetitions per pattern: `{config.runs}`",
-        f"- Max output tokens: `{config.max_tokens}`",
-        f"- Timeout: `{config.timeout_seconds:g}s`",
-        f"- Reasoning effort: `{reasoning}`",
+        "# Reproducible Benchmark Summary", "",
+        f"- Git commit: `{config.git_commit}`", f"- Provider: `{config.provider}`",
+        f"- Model: `{config.model}`", f"- Incident: `{config.incident_id}`",
+        f"- Repetitions per pattern: `{config.runs}`", f"- Max output tokens: `{config.max_tokens}`",
+        f"- Timeout: `{config.timeout_seconds:g}s`", f"- Reasoning effort: `{reasoning}`",
         f"- Interval between benchmark attempts: `{config.run_interval_seconds:g}s`",
-        f"- Benchmark status: `{'partial' if partial else 'complete'}`",
-        "",
-        "The interval applies between benchmark attempts only. It does not serialize calls inside a pattern; parallel fan-out remains concurrent and multi-call patterns retain their original behavior.",
-        "",
+        f"- Benchmark status: `{'partial' if partial else 'complete'}`", "",
+        "The interval applies between benchmark attempts only. It does not serialize calls inside a pattern; parallel fan-out remains concurrent and multi-call patterns retain their original behavior.", "",
         "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Unsupported | Proposed | Causality | Grounding | Rate limited | Trajectories |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for summary in summaries:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    summary.pattern.value,
-                    f"{summary.completed}/{summary.attempted}",
-                    _md_number(summary.mean_model_calls),
-                    _md_number(summary.mean_tool_calls),
-                    _md_number(summary.mean_total_tokens, digits=0),
-                    _md_number(summary.p50_latency_ms, suffix=" ms"),
-                    _md_number(summary.mean_unsupported),
-                    _md_number(summary.mean_proposed),
-                    _md_number(summary.mean_causality_overclaims),
-                    _md_percent(summary.mean_grounding_ratio),
-                    _md_percent(summary.rate_limit_rate),
-                    str(summary.unique_trajectories),
-                ]
-            )
-            + " |"
-        )
-    lines.extend(
-        [
-            "",
-            "`runs.jsonl` and `summary.csv` are metadata-only. They do not contain prompts, model answers, evidence bodies, tool arguments/results, or credentials.",
-            "",
-        ]
-    )
+        lines.append("| " + " | ".join([
+            summary.pattern.value, f"{summary.completed}/{summary.attempted}",
+            _md_number(summary.mean_model_calls), _md_number(summary.mean_tool_calls),
+            _md_number(summary.mean_total_tokens, digits=0), _md_number(summary.p50_latency_ms, suffix=" ms"),
+            _md_number(summary.mean_unsupported), _md_number(summary.mean_proposed),
+            _md_number(summary.mean_causality_overclaims), _md_percent(summary.mean_grounding_ratio),
+            _md_percent(summary.rate_limit_rate), str(summary.unique_trajectories),
+        ]) + " |")
+    lines.extend(["", "`runs.jsonl` and `summary.csv` are metadata-only. They do not contain prompts, model answers, evidence bodies, tool arguments/results, or credentials.", ""])
     return "\n".join(lines)
 
 
@@ -219,9 +179,7 @@ def _csv_number(value: float | None) -> str:
 
 
 def _md_number(value: float | None, *, digits: int = 1, suffix: str = "") -> str:
-    if value is None:
-        return "-"
-    return f"{value:.{digits}f}{suffix}"
+    return "-" if value is None else f"{value:.{digits}f}{suffix}"
 
 
 def _md_percent(value: float | None) -> str:
