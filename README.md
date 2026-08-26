@@ -17,10 +17,11 @@ The comparison also includes a deterministic grounding signal so model/tool call
 
 ## Provider support
 
-The architecture is provider-neutral. The project includes two transport adapters:
+The architecture is provider-neutral. The project includes three transport adapters:
 
 - native Anthropic Messages API;
-- OpenAI-compatible Chat Completions + function calling.
+- native OpenAI Responses API;
+- OpenAI-compatible Chat Completions + function calling for Groq, OpenRouter and custom endpoints.
 
 Presets are available for:
 
@@ -31,6 +32,8 @@ Presets are available for:
 | Groq | `groq` | `openai/gpt-oss-20b` | Free Plan available |
 | OpenRouter | `openrouter` | `openrouter/free` | free router |
 | Custom OpenAI-compatible | `custom` | user-defined | provider-dependent |
+
+OpenAI uses `/v1/responses` for both text and tool-use calls. The adapter sets `store=false`; during a bounded agent run it keeps returned Responses output items only in memory so opaque reasoning items can be replayed with subsequent function outputs. Provider-specific reasoning state does not enter the domain model or benchmark artifacts.
 
 **Recommended zero-cost starting point:** OpenRouter's `openrouter/free`. It routes requests among currently available free models. Availability, rate limits, model selection, and provider policies can change over time, so free access is intentionally configuration rather than a project invariant.
 
@@ -142,6 +145,7 @@ src/autonomy_lab/
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
 │   ├── anthropic.py
+│   ├── openai_responses.py
 │   ├── openai_compatible.py
 │   ├── providers.py        # environment composition/presets
 │   ├── incidents.py
@@ -293,6 +297,8 @@ There is still no real A2A/MCP/distributed-process boundary. Adding protocol inf
 
 - [Anthropic — Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)
 - [Anthropic — Messages API](https://platform.claude.com/docs/en/api/messages/create)
+- [OpenAI — Responses API / reasoning](https://developers.openai.com/api/docs/guides/reasoning)
+- [OpenAI — Function calling](https://developers.openai.com/api/docs/guides/function-calling)
 - [OpenAI — Models](https://developers.openai.com/api/docs/models)
 - [OpenRouter — Free Models Router](https://openrouter.ai/docs/guides/routing/routers/free-models-router)
 - [Groq — OpenAI Compatibility](https://console.groq.com/docs/openai)

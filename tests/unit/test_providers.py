@@ -2,6 +2,7 @@ import pytest
 
 from autonomy_lab.adapters.anthropic import AnthropicMessagesClient
 from autonomy_lab.adapters.openai_compatible import OpenAICompatibleChatClient
+from autonomy_lab.adapters.openai_responses import OpenAIResponsesClient
 from autonomy_lab.adapters.providers import client_from_env
 
 
@@ -11,10 +12,15 @@ def test_anthropic_is_preserved_as_default_provider() -> None:
     assert isinstance(client, AnthropicMessagesClient)
 
 
+def test_openai_uses_native_responses_api() -> None:
+    client = client_from_env({"LLM_PROVIDER": "openai", "OPENAI_API_KEY": "key"})
+
+    assert isinstance(client, OpenAIResponsesClient)
+
+
 @pytest.mark.parametrize(
     ("provider", "key_name"),
     [
-        ("openai", "OPENAI_API_KEY"),
         ("groq", "GROQ_API_KEY"),
         ("openrouter", "OPENROUTER_API_KEY"),
     ],

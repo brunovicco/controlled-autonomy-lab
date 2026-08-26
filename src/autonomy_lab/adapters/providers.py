@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 from autonomy_lab.adapters.anthropic import AnthropicMessagesClient
 from autonomy_lab.adapters.openai_compatible import OpenAICompatibleChatClient
+from autonomy_lab.adapters.openai_responses import OpenAIResponsesClient
 from autonomy_lab.application.model_ports import ModelClient
 
 _SUPPORTED = ("anthropic", "openai", "groq", "openrouter", "custom")
@@ -25,11 +26,9 @@ def client_from_env(env: Mapping[str, str] | None = None) -> ModelClient:
             timeout_seconds=timeout_seconds,
         )
     if provider == "openai":
-        return OpenAICompatibleChatClient(
+        return OpenAIResponsesClient(
             api_key=_required(settings, "OPENAI_API_KEY", provider),
-            base_url="https://api.openai.com/v1",
             model=settings.get("OPENAI_MODEL", "gpt-5.6-luna"),
-            provider_label="OpenAI API",
             max_tokens=max_tokens,
             timeout_seconds=timeout_seconds,
         )

@@ -120,6 +120,27 @@ def test_complete_maps_chat_completion_response(monkeypatch: pytest.MonkeyPatch)
     assert connection.request_headers["authorization"] == "Bearer test-key"
 
 
+def test_complete_reports_finish_reason_when_text_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse(
+            {
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": None},
+                        "finish_reason": "length",
+                    }
+                ]
+            }
+        ),
+    )
+
+    with pytest.raises(ModelProviderError, match="finish_reason=length"):
+        _client().complete(system="system", prompt="prompt")
+
+
 def test_next_turn_round_trips_function_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     connection = _install_connection(
         monkeypatch,
@@ -211,6 +232,39 @@ def test_rate_limit_error_is_typed_redacted_and_preserves_retry_after(
 
     assert "do-not-leak" not in str(exc_info.value)
     assert exc_info.value.retry_after == "7"
+
+
+def test_provider_http_error_exposes_only_safe_bounded_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connection(
+        monkeypatch,
+        FakeHTTPResponse(
+            {
+                "error": {
+                    "type": "invalid_request_error",
+                    "code": "bad_tool_message",
+                    "message": "Tool message rejected for test-key; Bearer hidden-token",
+                },
+                "request": {"messages": ["do-not-copy"]},
+                "secret": "do-not-leak",
+            },
+            status=400,
+        ),
+    )
+
+    with pytest.raises(ModelProviderError) as exc_info:
+        _client().complete(system="system", prompt="prompt")
+
+    message = str(exc_info.value)
+    assert "HTTP 400" in message
+    assert "type=invalid_request_error" in message
+    assert "code=bad_tool_message" in message
+    assert "Tool message rejected" in message
+    assert "test-key" not in message
+    assert "hidden-token" not in message
+    assert "do-not-copy" not in message
+    assert "do-not-leak" not in message
 
 
 def test_provider_rejects_invalid_tool_argument_json(monkeypatch: pytest.MonkeyPatch) -> None:

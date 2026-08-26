@@ -74,11 +74,14 @@ export OPENAI_API_KEY="..."
 export OPENAI_MODEL=gpt-5.6-luna
 ```
 
-The preset uses Chat Completions and function calling. Override `OPENAI_MODEL` if you want to compare another model that supports the required capabilities.
+The OpenAI preset uses the native Responses API for both text-only and tool-use turns. This allows reasoning models to use function tools without disabling reasoning.
+
+The adapter sends `store=false`. During a bounded agent run, returned Responses output items are kept only in process memory so opaque reasoning items can be replayed together with later `function_call_output` items. Provider-specific reasoning state does not enter the domain model or benchmark artifacts.
 
 Official docs:
+- https://developers.openai.com/api/docs/guides/reasoning
+- https://developers.openai.com/api/docs/guides/function-calling
 - https://developers.openai.com/api/docs/models
-- https://developers.openai.com/api/reference/resources/chat
 
 ## Custom OpenAI-compatible endpoint
 
@@ -99,9 +102,9 @@ Provider switching introduces more than a model-name change. For useful comparis
 
 1. Pin a concrete model instead of a router when reproducibility matters.
 2. Keep the same incident fixture and pattern configuration.
-3. Keep `LLM_MAX_TOKENS` and budgets constant.
+3. Keep `LLM_MAX_TOKENS` and budgets constant where that limit has comparable semantics; document provider-specific differences when it does not.
 4. Repeat stochastic/model-controlled patterns more than once.
 5. Record metadata-only traces to compare model calls, tool calls, token use, latency and trajectory.
 6. Do not interpret differences in provider token accounting as perfectly equivalent billing units.
 
-No provider SDK is required. Both adapters intentionally expose the transport details so the control-flow comparison remains visible.
+No provider SDK is required. Provider-specific adapters intentionally expose transport details while keeping the application boundary provider-neutral.
