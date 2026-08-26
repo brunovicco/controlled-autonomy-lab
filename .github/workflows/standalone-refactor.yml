@@ -1,0 +1,91 @@
+name: Standalone package refactor
+
+on:
+  push:
+    branches:
+      - refactor/standalone-package
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refactor/standalone-package
+
+      - name: Rename package and standalone references
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          source = root / 'src' / 'harness_example'
+          target = root / 'src' / 'autonomy_lab'
+
+          if source.exists():
+              source.rename(target)
+
+          old_cli = target / 'entrypoints' / 'autonomy_cli.py'
+          new_cli = target / 'cli.py'
+          if old_cli.exists():
+              old_cli.rename(new_cli)
+
+          entrypoints_init = target / 'entrypoints' / '__init__.py'
+          if entrypoints_init.exists():
+              entrypoints_init.unlink()
+          entrypoints_dir = target / 'entrypoints'
+          if entrypoints_dir.exists():
+              entrypoints_dir.rmdir()
+
+          replacements = (
+              ('harness_example', 'autonomy_lab'),
+              ('autonomy_lab.entrypoints.autonomy_cli', 'autonomy_lab.cli'),
+              ('claude-python-engineering-harness-example', 'controlled-autonomy-lab'),
+          )
+
+          skip = {Path('.github/workflows/standalone-refactor.yml'), Path('uv.lock')}
+          for path in root.rglob('*'):
+              if not path.is_file() or path in skip or '.git' in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              updated = text
+              for old, new in replacements:
+                  updated = updated.replace(old, new)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+
+          pyproject = root / 'pyproject.toml'
+          text = pyproject.read_text(encoding='utf-8')
+          if '[project.scripts]' not in text:
+              text = text.replace(
+                  'dependencies = []\n',
+                  'dependencies = []\n\n[project.scripts]\nautonomy-lab = "autonomy_lab.cli:main"\n',
+                  1,
+              )
+              pyproject.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify legacy references are gone
+        run: |
+          if grep -R --exclude='standalone-refactor.yml' --exclude='uv.lock' -n \
+            -e 'harness_example' \
+            -e 'claude-python-engineering-harness-example' \
+            src tests README.md docs CLAUDE.md .claude pyproject.toml scripts; then
+            echo 'Legacy standalone references remain.'
+            exit 1
+          fi
+
+      - name: Commit refactor
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor: rename package to autonomy_lab"
+          git push origin HEAD:refactor/standalone-package
