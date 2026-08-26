@@ -54,7 +54,9 @@ def test_observed_agent_claim_partition_is_stable() -> None:
     assert report.supported_claim_count == 8
     assert report.support_ratio == 8 / 9
 
-    historical = next(claim for claim in report.claims if claim.claim.startswith("A prior incident"))
+    historical = next(
+        claim for claim in report.claims if claim.claim.startswith("A prior incident")
+    )
     assert historical.kind is ClaimKind.UNSUPPORTED_CLAIM
     assert historical.rationale == "deterministic-v2-no-direct-support"
 
