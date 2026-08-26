@@ -32,10 +32,15 @@ from autonomy_lab.application.patterns.evaluator_optimizer import (
 )
 from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
 from autonomy_lab.application.patterns.routing import RoutedIncidentAnalysis
+from autonomy_lab.application.semantic_claim_evaluation import (
+    SemanticClaimEvaluationError,
+    SemanticClaimEvaluatorV21,
+)
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkStatus
 from autonomy_lab.domain.claim_evaluation import ClaimEvaluationReport
 from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport
+from autonomy_lab.domain.semantic_claim_evaluation import MergedClaimEvaluationReport
 
 
 def _build_runner(
@@ -105,10 +110,54 @@ def _claim_evaluation_payload(report: ClaimEvaluationReport) -> dict[str, object
     }
 
 
+def _semantic_claim_evaluation_payload(
+    report: MergedClaimEvaluationReport,
+) -> dict[str, object]:
+    claims: list[dict[str, object]] = []
+    for item in report.claims:
+        semantic: dict[str, object] | None = None
+        if item.semantic is not None:
+            semantic = {
+                "kind": item.semantic.verdict.value,
+                "rationale": item.semantic.rationale,
+                "evidence_sources": list(item.semantic.evidence_sources),
+            }
+        claims.append(
+            {
+                "claim": item.deterministic.claim,
+                "deterministic": {
+                    "kind": item.deterministic.kind.value,
+                    "rationale": item.deterministic.rationale,
+                    "evidence_sources": list(item.deterministic.evidence_sources),
+                },
+                "semantic": semantic,
+                "final_kind": item.final_kind.value,
+                "disagreement": item.disagreement,
+                "resolution": item.resolution,
+            }
+        )
+    return {
+        "status": "ok",
+        "claims": claims,
+        "supported_facts": report.supported_fact_count,
+        "supported_inferences": report.supported_inference_count,
+        "proposed_actions": report.proposed_action_count,
+        "unsupported_claims": report.unsupported_claim_count,
+        "evaluable_claims": report.evaluable_claim_count,
+        "disagreements": report.disagreement_count,
+        "support_ratio": round(report.support_ratio, 4),
+        "semantic_model_calls": report.semantic_model_calls,
+        "semantic_input_tokens": report.semantic_usage.input_tokens,
+        "semantic_output_tokens": report.semantic_usage.output_tokens,
+    }
+
+
 def _run_payload(
     run: PatternRun,
     grounding: GroundingReport | None = None,
     claim_evaluation: ClaimEvaluationReport | None = None,
+    semantic_claim_evaluation: MergedClaimEvaluationReport | None = None,
+    semantic_error: str | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "pattern": run.pattern.value,
@@ -125,6 +174,15 @@ def _run_payload(
         payload["grounding"] = _grounding_payload(grounding)
     if claim_evaluation is not None:
         payload["claim_evaluation"] = _claim_evaluation_payload(claim_evaluation)
+    if semantic_claim_evaluation is not None:
+        payload["semantic_claim_evaluation"] = _semantic_claim_evaluation_payload(
+            semantic_claim_evaluation
+        )
+    elif semantic_error is not None:
+        payload["semantic_claim_evaluation"] = {
+            "status": "error",
+            "error": semantic_error,
+        }
     return payload
 
 
@@ -201,15 +259,48 @@ def _print_claim_evaluation(report: ClaimEvaluationReport) -> None:
         print(f"- {claim.kind.value}: {claim.claim!r} [{claim.rationale}; sources={sources}]")
 
 
+def _print_semantic_claim_evaluation(report: MergedClaimEvaluationReport) -> None:
+    print("\nsemantic claim evaluation v2.1:\n")
+    print(f"supported facts:       {report.supported_fact_count}")
+    print(f"supported inferences:  {report.supported_inference_count}")
+    print(f"proposed actions:      {report.proposed_action_count}")
+    print(f"unsupported claims:    {report.unsupported_claim_count}")
+    print(f"disagreements:         {report.disagreement_count}")
+    print(f"claim support:         {report.support_ratio:.1%}")
+    print(f"semantic model calls:  {report.semantic_model_calls}")
+    print(f"semantic input tokens: {report.semantic_usage.input_tokens}")
+    print(f"semantic output tokens:{report.semantic_usage.output_tokens:>3}")
+    for item in report.claims:
+        semantic_kind = item.semantic.verdict.value if item.semantic is not None else "-"
+        marker = " != " if item.disagreement else " -> "
+        print(
+            f"- {item.deterministic.kind.value}{marker}{semantic_kind} -> "
+            f"{item.final_kind.value}: {item.deterministic.claim!r} [{item.resolution}]"
+        )
+
+
 def _print_run(
     run: PatternRun,
     *,
     as_json: bool,
     grounding: GroundingReport | None = None,
     claim_evaluation: ClaimEvaluationReport | None = None,
+    semantic_claim_evaluation: MergedClaimEvaluationReport | None = None,
+    semantic_error: str | None = None,
 ) -> None:
     if as_json:
-        print(json.dumps(_run_payload(run, grounding, claim_evaluation), indent=2))
+        print(
+            json.dumps(
+                _run_payload(
+                    run,
+                    grounding,
+                    claim_evaluation,
+                    semantic_claim_evaluation,
+                    semantic_error,
+                ),
+                indent=2,
+            )
+        )
         return
     print(f"pattern:       {run.pattern.value}")
     print(f"model calls:   {run.model_calls}")
@@ -224,6 +315,10 @@ def _print_run(
         _print_grounding(grounding)
     if claim_evaluation is not None:
         _print_claim_evaluation(claim_evaluation)
+    if semantic_claim_evaluation is not None:
+        _print_semantic_claim_evaluation(semantic_claim_evaluation)
+    elif semantic_error is not None:
+        print(f"\nsemantic claim evaluation v2.1 error: {semantic_error}", file=sys.stderr)
 
 
 def _record_if_requested(run: PatternRun, trace_file: str | None) -> None:
@@ -251,6 +346,21 @@ def _claim_evaluation_for_run(
     incident = store.get_incident(run.incident_id)
     evidence = store.get_evidence(incident)
     return evaluator.evaluate(answer=run.answer, incident=incident, evidence=evidence)
+
+
+def _semantic_claim_evaluation_for_run(
+    run: PatternRun,
+    *,
+    store: InMemoryIncidentStore,
+    model: ModelClient,
+    deterministic: ClaimEvaluationReport,
+) -> MergedClaimEvaluationReport:
+    incident = store.get_incident(run.incident_id)
+    evidence = store.get_evidence(incident)
+    return SemanticClaimEvaluatorV21(model=model).evaluate(
+        deterministic=deterministic,
+        evidence=evidence,
+    )
 
 
 def _positive_int(value: str) -> int:
@@ -294,6 +404,11 @@ def _parser() -> argparse.ArgumentParser:
         "--claims",
         action="store_true",
         help="classify answer claims with the conservative deterministic v2 baseline",
+    )
+    run_parser.add_argument(
+        "--semantic-claims",
+        action="store_true",
+        help="semantically re-evaluate conservative claim misses; implies --claims",
     )
 
     compare_parser = subparsers.add_parser("compare", help="execute every pattern once")
@@ -432,25 +547,43 @@ def main(argv: Sequence[str] | None = None) -> int:
         _record_if_requested(run, args.trace_file)
         grounding = None
         claim_evaluation = None
+        semantic_claim_evaluation = None
+        semantic_error = None
         if args.grounding:
             grounding = _grounding_for_run(
                 run,
                 store=store,
                 evaluator=DeterministicGroundingEvaluator(),
             )
-        if args.claims:
+        if args.claims or args.semantic_claims:
             claim_evaluation = _claim_evaluation_for_run(
                 run,
                 store=store,
                 evaluator=DeterministicClaimEvaluatorV2(),
             )
+        if args.semantic_claims and claim_evaluation is not None:
+            try:
+                semantic_claim_evaluation = _semantic_claim_evaluation_for_run(
+                    run,
+                    store=store,
+                    model=model,
+                    deterministic=claim_evaluation,
+                )
+            except ModelRateLimitError as exc:
+                semantic_error = f"rate_limited: {exc}"
+            except ModelProviderError as exc:
+                semantic_error = f"provider_error: {exc}"
+            except SemanticClaimEvaluationError as exc:
+                semantic_error = f"invalid_semantic_output: {exc}"
         _print_run(
             run,
             as_json=args.json,
             grounding=grounding,
             claim_evaluation=claim_evaluation,
+            semantic_claim_evaluation=semantic_claim_evaluation,
+            semantic_error=semantic_error,
         )
-        return 0
+        return 2 if semantic_error is not None else 0
 
     if args.command == "compare":
         evaluator = DeterministicGroundingEvaluator()
