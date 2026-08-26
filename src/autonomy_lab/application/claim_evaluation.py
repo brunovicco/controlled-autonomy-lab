@@ -34,6 +34,8 @@ _IMPERATIVE_RE = re.compile(
     re.IGNORECASE,
 )
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+_NEGATION_RE = re.compile(r"\b(?:no|not|without|never)\b", re.IGNORECASE)
+_HIGH_CONFIDENCE_PARAPHRASE_SOURCES = frozenset({"deployments", "dependencies"})
 _STOPWORDS = {
     "a",
     "an",
@@ -56,6 +58,7 @@ _STOPWORDS = {
     "or",
     "that",
     "the",
+    "there",
     "this",
     "to",
     "was",
@@ -148,6 +151,45 @@ def _is_direct_textual_support(
     return normalized_claim in _normalized_text(_reference_text(incident, evidence))
 
 
+def _shared_content_ngram(left: str, right: str, *, size: int) -> bool:
+    left_tokens = [token for token in _normalized_text(left).split() if token not in _STOPWORDS]
+    right_tokens = [token for token in _normalized_text(right).split() if token not in _STOPWORDS]
+    if len(left_tokens) < size or len(right_tokens) < size:
+        return False
+    left_ngrams = {
+        tuple(left_tokens[index : index + size])
+        for index in range(len(left_tokens) - size + 1)
+    }
+    return any(
+        tuple(right_tokens[index : index + size]) in left_ngrams
+        for index in range(len(right_tokens) - size + 1)
+    )
+
+
+def _has_high_confidence_fixture_support(
+    claim: str,
+    *,
+    evidence: tuple[EvidenceItem, ...],
+) -> bool:
+    """Recognize bounded near-verbatim paraphrases without attempting general entailment."""
+    claim_tokens = _content_tokens(claim)
+    if len(claim_tokens) < 4:
+        return False
+    claim_negated = _NEGATION_RE.search(claim) is not None
+    for item in evidence:
+        if item.source not in _HIGH_CONFIDENCE_PARAPHRASE_SOURCES:
+            continue
+        if claim_negated != (_NEGATION_RE.search(item.summary) is not None):
+            continue
+        evidence_tokens = _content_tokens(item.summary)
+        coverage = len(claim_tokens & evidence_tokens) / len(claim_tokens)
+        if coverage >= 0.8:
+            return True
+        if coverage >= 0.7 and _shared_content_ngram(claim, item.summary, size=3):
+            return True
+    return False
+
+
 def _is_proposed(candidate: _ClaimCandidate) -> bool:
     section_action = bool(_PROPOSAL_HEADING_RE.search(candidate.heading)) and candidate.list_item
     return bool(section_action or _IMPERATIVE_RE.match(candidate.text))
@@ -164,9 +206,10 @@ def _is_inference(candidate: _ClaimCandidate) -> bool:
 class DeterministicClaimEvaluatorV2:
     """Classify claims conservatively using fixture evidence plus Grounding v1 hard signals.
 
-    This baseline intentionally does not pretend to perform semantic entailment. A future semantic
+    This baseline intentionally does not pretend to perform semantic entailment. A semantic
     evaluator may upgrade paraphrases or nuanced inferences, but it must not erase deterministic
-    unsupported-specific or causality findings.
+    unsupported-specific or causality findings. A small bounded near-verbatim matcher handles
+    high-confidence deployment/dependency paraphrases before semantic escalation.
     """
 
     def __init__(
@@ -232,7 +275,7 @@ class DeterministicClaimEvaluatorV2:
             candidate.text,
             incident=incident,
             evidence=evidence,
-        ):
+        ) or _has_high_confidence_fixture_support(candidate.text, evidence=evidence):
             return ClaimEvaluation(
                 claim=candidate.text,
                 kind=ClaimKind.SUPPORTED_FACT,
