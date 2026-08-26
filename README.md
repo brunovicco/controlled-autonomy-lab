@@ -13,7 +13,7 @@ Controlled Autonomy Lab is a small Python reference implementation for comparing
 
 The goal is not to prove that agents are better. It is to make the delegation boundary observable: **who owns the next step, deterministic application code or the model?**
 
-The comparison also includes a deterministic grounding signal so model/tool calls, token use and latency can be viewed alongside unsupported factual specifics, proposed action parameters, causal overclaims and uncertainty preservation.
+The comparison also includes deterministic grounding and a reproducible benchmark so model/tool calls, token use, latency, provider reliability and factual grounding can be viewed together.
 
 ## Provider support
 
@@ -132,13 +132,17 @@ The fixture creates correlation without proving causality. Good output should di
 src/autonomy_lab/
 ├── domain/
 │   ├── autonomy.py         # provider-neutral run contracts
+│   ├── benchmark.py        # benchmark records and aggregate contracts
 │   └── grounding.py        # deterministic grounding result types
 ├── application/
+│   ├── benchmark.py        # repeated benchmark orchestration + aggregation
 │   ├── model_ports.py      # common text + tool-use model boundary
 │   ├── model_errors.py     # provider-neutral error contract
 │   ├── grounding.py        # fixture-backed grounding evaluator
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
+│   ├── benchmark_artifacts.py
+│   ├── benchmark_metadata.py
 │   ├── anthropic.py
 │   ├── openai_compatible.py
 │   ├── providers.py        # environment composition/presets
@@ -187,6 +191,39 @@ uv run autonomy-lab repeat agent --incident INC-001 --runs 5
 
 Live runs can consume quota or paid tokens depending on the selected provider.
 
+## Reproducible Benchmark v1
+
+Run repeated cycles across all six patterns and persist the experiment:
+
+```bash
+uv run autonomy-lab benchmark \
+  --incident INC-001 \
+  --runs 5 \
+  --run-interval-seconds 2 \
+  --output results/groq-gpt-oss-20b-900
+```
+
+Each cycle contains all six patterns, but the starting pattern rotates deterministically on later cycles. This reduces fixed-order exposure to provider quota drift without introducing random ordering.
+
+`--run-interval-seconds` pauses only **between benchmark attempts**. It does not serialize calls inside a pattern, so `parallel` remains concurrent and chaining/evaluator/agent retain their original multi-call behavior. There are no hidden retries.
+
+The benchmark writes:
+
+```text
+results/groq-gpt-oss-20b-900/
+├── runs.jsonl
+├── summary.csv
+└── summary.md
+```
+
+The artifacts contain provider/model/configuration metadata, execution metrics, deterministic grounding counts, reliability status and successful trajectories. They remain metadata-only: prompts, model answers, evidence bodies, tool arguments/results and credentials are excluded.
+
+Existing benchmark files are protected by default. Use `--overwrite` only when replacement is intentional.
+
+A complete benchmark returns exit code `0`. If one or more attempts are rate-limited or fail at the provider boundary, remaining attempts continue, partial artifacts are preserved, and the command returns `2`.
+
+See [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md) for methodology, output schema, pacing semantics, aggregation rules and limitations.
+
 ## Grounding Evaluation v1
 
 Grounding Evaluation v1 is deterministic: it does not call another LLM and treats the bounded incident fixture as the source of truth.
@@ -197,13 +234,14 @@ It currently checks:
 - timestamps;
 - measurements, percentages and durations;
 - exact percentage-point deltas derivable from fixture percentages;
+- timestamp-to-measurement associations in supported Markdown table structures;
 - strong causal language without a local or section-level uncertainty qualifier;
 - explicit preservation of uncertainty;
 - proposal sections, where new time/measurement values are tracked as `proposed-parameter` instead of being counted as unsupported facts.
 
 The parser excludes timestamp spans from measurement detection, so text such as `13:55 % 5xx = 0.2 %` cannot accidentally create a `55%` finding.
 
-This makes observed failures such as an invented previous release or latency measurement visible while keeping new monitoring windows and alert thresholds distinct from factual hallucinations.
+This makes failures such as an invented previous release, invented latency measurement, or a supported value attached to the wrong supported timestamp visible while keeping new monitoring windows and alert thresholds distinct from factual hallucinations.
 
 It is intentionally **not** a universal hallucination detector. A `100%` specific-grounding ratio means that the exact factual specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct. Proposed action parameters are visible but excluded from that factual ratio.
 
@@ -233,6 +271,8 @@ uv run autonomy-lab \
 
 The trace contains pattern, incident id, model/tool call counts, trajectory, token counts and latency. It deliberately excludes prompts, model answers, evidence content, tool arguments/results and credentials. Grounding findings are not persisted in this metadata-only trace because they are derived from answer content.
 
+Successful benchmark runs can also be appended to the same trace by passing global `--trace-file` before the `benchmark` subcommand.
+
 ## Quality gate
 
 ```bash
@@ -257,5 +297,6 @@ There is still no real A2A/MCP/distributed-process boundary. Adding protocol inf
 - [OpenRouter — Free Models Router](https://openrouter.ai/docs/guides/routing/routers/free-models-router)
 - [Groq — OpenAI Compatibility](https://console.groq.com/docs/openai)
 - [Groq — Rate limits](https://console.groq.com/docs/rate-limits)
+- [Groq — API reference](https://console.groq.com/docs/api-reference)
 - [Claude Python Engineering Harness](https://github.com/brunovicco/claude-python-engineering-harness)
 - [a2a-otel-kit](https://github.com/brunovicco/a2a-otel-kit)
