@@ -13,6 +13,7 @@ from autonomy_lab.domain.grounding import (
 
 _VERSION_RE = re.compile(r"(?<![\w.])v\d+\.\d+\.\d+(?!\w|\.\d)", re.IGNORECASE)
 _TIME_RE = re.compile(r"(?<!\d)(?:[01]?\d|2[0-3]):[0-5]\d(?!\d)")
+_INCIDENT_ID_RE = re.compile(r"\bINC-\d+\b", re.IGNORECASE)
 _NUMBER_PATTERN = r"(?:\d{1,3}(?:[,\u202f\xa0 ]\d{3})+|\d+)(?:\.\d+)?"
 _MEASUREMENT_RE = re.compile(
     rf"(?<![\w.]){_NUMBER_PATTERN}"
@@ -28,6 +29,11 @@ _PROPOSAL_HEADING_RE = re.compile(
     r"\b(?:recommend\w*|next[- ]?steps?|actions?|plan|checks?|mitigation|remediation)\b",
     re.IGNORECASE,
 )
+_APPROXIMATION_PREFIX_RE = re.compile(
+    r"(?:~|≈|\babout\b|\baround\b|\broughly\b|\bapprox(?:\.|imately)?\b)\s*$",
+    re.IGNORECASE,
+)
+_SCALAR_TIME_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)(?P<unit>ms|s)$")
 _CAUSALITY_RE = re.compile(
     r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
     re.IGNORECASE,
@@ -38,6 +44,27 @@ _UNCERTAINTY_RE = re.compile(
     r"unknown|assuming|would confirm|would falsify)\b",
     re.IGNORECASE,
 )
+_CAUSAL_TAIL_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "been",
+    "by",
+    "for",
+    "has",
+    "have",
+    "is",
+    "of",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
+    "was",
+    "were",
+}
 
 
 def _reference_text(incident: Incident, evidence: tuple[EvidenceItem, ...]) -> str:
@@ -70,7 +97,7 @@ def _normalize_measurement(value: str) -> str:
     normalized = re.sub(r"(?:mins?|minutes?)$", "min", normalized)
     normalized = re.sub(r"(?:hrs?|hours?)$", "h", normalized)
 
-    scalar_time = re.fullmatch(r"(?P<number>\d+(?:\.\d+)?)(?P<unit>ms|s)", normalized)
+    scalar_time = _SCALAR_TIME_RE.fullmatch(normalized)
     if scalar_time is None:
         return normalized
     try:
@@ -154,6 +181,91 @@ def _is_supported_pp(value: str, derived_pp: set[float]) -> bool:
         return False
 
 
+def _is_explicit_approximation(text: str, position: int) -> bool:
+    prefix = text[max(0, position - 24) : position]
+    return bool(_APPROXIMATION_PREFIX_RE.search(prefix))
+
+
+def _scalar_time_parts(value: str) -> tuple[Decimal, str, int] | None:
+    compact = value.lower().replace("\u202f", " ").replace("\xa0", " ")
+    compact = re.sub(r"\s+", "", compact).replace(",", "")
+    compact = re.sub(r"milliseconds?$", "ms", compact)
+    compact = re.sub(r"(?:secs?|seconds?)$", "s", compact)
+    match = _SCALAR_TIME_RE.fullmatch(compact)
+    if match is None:
+        return None
+    number_text = match.group("number")
+    try:
+        numeric = Decimal(number_text)
+    except InvalidOperation:
+        return None
+    decimal_places = len(number_text.partition(".")[2])
+    return numeric, match.group("unit"), decimal_places
+
+
+def _approximate_supported_measurement(
+    *,
+    text: str,
+    match: re.Match[str],
+    supported_measurements: set[str],
+) -> str | None:
+    """Return the exact fixture value represented by an explicitly rounded time measurement."""
+    if not _is_explicit_approximation(text, match.start()):
+        return None
+    candidate = _scalar_time_parts(match.group())
+    if candidate is None:
+        return None
+    candidate_value, candidate_unit, decimal_places = candidate
+    quantum = Decimal(1).scaleb(-decimal_places)
+
+    for supported in supported_measurements:
+        reference = _scalar_time_parts(supported)
+        if reference is None:
+            continue
+        reference_value, reference_unit, _ = reference
+        if reference_unit == "ms" and candidate_unit == "s":
+            reference_value /= Decimal(1000)
+        elif reference_unit == "s" and candidate_unit == "ms":
+            reference_value *= Decimal(1000)
+        if reference_value.quantize(quantum) == candidate_value:
+            return supported
+    return None
+
+
+def _word_tokens(text: str) -> set[str]:
+    return {token.lower() for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", text)}
+
+
+def _supported_historical_causality(
+    *,
+    line: str,
+    causal: re.Match[str],
+    reference: str,
+    current_incident_id: str,
+) -> bool:
+    """Accept a causal statement about a prior incident only when its causal detail is evidenced."""
+    line_ids = {item.upper() for item in _INCIDENT_ID_RE.findall(line)}
+    reference_ids = {item.upper() for item in _INCIDENT_ID_RE.findall(reference)}
+    historical_ids = (line_ids & reference_ids) - {current_incident_id.upper()}
+    if not historical_ids:
+        return False
+
+    tail_tokens = _word_tokens(line[causal.end() :]) - _CAUSAL_TAIL_STOPWORDS
+    if not tail_tokens:
+        return False
+
+    for incident_id in historical_ids:
+        evidence_lines = [
+            reference_line
+            for reference_line in reference.splitlines()
+            if incident_id.lower() in reference_line.lower()
+        ]
+        evidence_tokens = _word_tokens(" ".join(evidence_lines))
+        if tail_tokens.issubset(evidence_tokens):
+            return True
+    return False
+
+
 class DeterministicGroundingEvaluator:
     """Evaluate exact specifics and causal language without another model call."""
 
@@ -221,8 +333,16 @@ class DeterministicGroundingEvaluator:
 
         for match in _measurement_matches(answer):
             normalized = _normalize_measurement(match.group())
+            approximate_reference = _approximate_supported_measurement(
+                text=answer,
+                match=match,
+                supported_measurements=supported_measurements,
+            )
             if normalized in supported_measurements or _is_supported_pp(normalized, derived_pp):
                 supported.append(normalized)
+                continue
+            if approximate_reference is not None:
+                supported.append(approximate_reference)
                 continue
             if _is_proposed_context(answer, match.start()):
                 self._append_finding(
@@ -243,7 +363,11 @@ class DeterministicGroundingEvaluator:
                 context=_context_for(answer, match.start(), match.end()),
             )
 
-        causality = self._causality_findings(answer)
+        causality = self._causality_findings(
+            answer,
+            reference=reference,
+            current_incident_id=incident.incident_id,
+        )
         return GroundingReport(
             supported_specifics=_unique(supported),
             unsupported_specifics=tuple(unsupported),
@@ -269,7 +393,12 @@ class DeterministicGroundingEvaluator:
         findings.append(GroundingFinding(kind=kind, value=value, context=context))
 
     @staticmethod
-    def _causality_findings(answer: str) -> tuple[GroundingFinding, ...]:
+    def _causality_findings(
+        answer: str,
+        *,
+        reference: str,
+        current_incident_id: str,
+    ) -> tuple[GroundingFinding, ...]:
         findings: list[GroundingFinding] = []
         seen_contexts: set[str] = set()
         active_heading = ""
@@ -284,6 +413,13 @@ class DeterministicGroundingEvaluator:
             causal = _CAUSALITY_RE.search(line)
             section_is_qualified = bool(_UNCERTAINTY_RE.search(active_heading))
             if causal is None or _UNCERTAINTY_RE.search(line) or section_is_qualified:
+                continue
+            if _supported_historical_causality(
+                line=line,
+                causal=causal,
+                reference=reference,
+                current_incident_id=current_incident_id,
+            ):
                 continue
             if line in seen_contexts:
                 continue
