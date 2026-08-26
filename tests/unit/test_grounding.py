@@ -1,9 +1,10 @@
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 from autonomy_lab.domain.grounding import GroundingFindingKind
 
 
-def _fixture():
+def _fixture() -> tuple[Incident, tuple[EvidenceItem, ...]]:
     store = InMemoryIncidentStore()
     incident = store.get_incident("INC-001")
     return incident, store.get_evidence(incident)
@@ -37,7 +38,7 @@ def test_unsupported_specifics_match_observed_live_run_failures() -> None:
     answer = (
         "p95 rose through 1\u202f250 ms while provider latency moved from 450 ms to 1,200 ms.\n"
         "Revert to v2.18.3 and restore the timeout to 3 s.\n"
-        "Monitor the result for 30–60 min."
+        "Monitor the result for 30\u201360 min."
     )
 
     report = DeterministicGroundingEvaluator().evaluate(
@@ -52,7 +53,7 @@ def test_unsupported_specifics_match_observed_live_run_failures() -> None:
     assert (GroundingFindingKind.UNSUPPORTED_MEASUREMENT, "1,200 ms") in findings
     assert (GroundingFindingKind.UNSUPPORTED_VERSION, "v2.18.3") in findings
     assert (GroundingFindingKind.UNSUPPORTED_MEASUREMENT, "3 s") in findings
-    assert (GroundingFindingKind.UNSUPPORTED_MEASUREMENT, "30–60 min") in findings
+    assert (GroundingFindingKind.UNSUPPORTED_MEASUREMENT, "30\u201360 min") in findings
     assert report.unsupported_count == 6
 
 
