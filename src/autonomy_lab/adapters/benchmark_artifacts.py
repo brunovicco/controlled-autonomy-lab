@@ -197,6 +197,7 @@ def _summary_markdown(
 ) -> str:
     partial = any(record.status is not BenchmarkStatus.OK for record in records)
     rate_limited = any(record.status is BenchmarkStatus.RATE_LIMITED for record in records)
+    provider_errors = any(record.status is BenchmarkStatus.PROVIDER_ERROR for record in records)
     reasoning = config.reasoning_effort or "default/provider-defined"
     lines = [
         "# Reproducible Benchmark Summary",
@@ -229,14 +230,28 @@ def _summary_markdown(
                 ),
             ]
         )
+    if provider_errors:
+        lines.extend(
+            [
+                "",
+                (
+                    "Provider errors occurred in this experiment. Safe bounded diagnostics are "
+                    "recorded in `runs.jsonl`; raw provider response bodies are not persisted."
+                ),
+            ]
+        )
     lines.extend(
         [
             "",
             (
                 "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Unsupported "
-                "| Proposed | Causality | Grounding | Rate limited | Trajectories |"
+                "| Proposed | Causality | Grounding | Rate limited | Provider errors | "
+                "Trajectories |"
             ),
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            (
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | "
+                "---: | ---: | ---: |"
+            ),
         ]
     )
     for summary in summaries:
@@ -255,6 +270,7 @@ def _summary_markdown(
                     _md_number(summary.mean_causality_overclaims),
                     _md_percent(summary.mean_grounding_ratio),
                     _md_percent(summary.rate_limit_rate),
+                    _md_percent(summary.provider_error_rate),
                     str(summary.unique_trajectories),
                 ]
             )
