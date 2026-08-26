@@ -158,7 +158,12 @@ class DeterministicClaimEvaluatorV2:
     unsupported-specific or causality findings.
     """
 
-    def __init__(self, *, grounding_evaluator: DeterministicGroundingEvaluator | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        grounding_evaluator: DeterministicGroundingEvaluator | None = None,
+    ) -> None:
+        """Configure the deterministic hard-signal evaluator dependency."""
         self._grounding = grounding_evaluator or DeterministicGroundingEvaluator()
 
     def evaluate(
