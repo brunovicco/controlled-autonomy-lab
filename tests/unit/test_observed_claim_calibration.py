@@ -6,10 +6,7 @@ from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
 from autonomy_lab.domain.claim_evaluation import ClaimKind
 
 _FIXTURE = (
-    Path(__file__).parents[1]
-    / "fixtures"
-    / "observed"
-    / "openai_gpt_5_6_luna_agent_inc001.txt"
+    Path(__file__).parents[1] / "fixtures" / "observed" / "openai_gpt_5_6_luna_agent_inc001.txt"
 )
 
 
