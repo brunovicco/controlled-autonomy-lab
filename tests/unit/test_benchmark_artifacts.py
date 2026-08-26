@@ -2,6 +2,8 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
+
 from autonomy_lab.adapters.benchmark_artifacts import write_benchmark_artifacts
 from autonomy_lab.domain.autonomy import AutonomyPattern
 from autonomy_lab.domain.benchmark import (
@@ -103,3 +105,18 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
     assert "# Reproducible Benchmark Summary" in markdown
     assert "agent | 1/1" in markdown
     assert "parallel fan-out remains concurrent" in markdown
+
+
+def test_benchmark_artifacts_require_explicit_overwrite(tmp_path: Path) -> None:
+    kwargs = {
+        "output_dir": tmp_path,
+        "config": _config(),
+        "records": (_record(),),
+        "summaries": (_summary(),),
+    }
+    write_benchmark_artifacts(**kwargs)
+
+    with pytest.raises(FileExistsError, match="--overwrite"):
+        write_benchmark_artifacts(**kwargs)
+
+    write_benchmark_artifacts(**kwargs, overwrite=True)
