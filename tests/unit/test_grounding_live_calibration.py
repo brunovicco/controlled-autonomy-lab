@@ -73,3 +73,34 @@ def test_historical_incident_does_not_exempt_an_invented_cause() -> None:
 
     assert len(report.causality_overclaims) == 1
     assert report.causality_overclaims[0].value == "root cause"
+
+
+def test_markdown_table_supported_time_measurement_pair_passes() -> None:
+    report = _evaluate(
+        """| Time | Metrics |
+| --- | --- |
+| 14:10 | Error rate 8.7% and p95 latency 2,840 ms |
+"""
+    )
+
+    assert not any(
+        finding.kind is GroundingFindingKind.UNSUPPORTED_ASSOCIATION
+        for finding in report.unsupported_specifics
+    )
+
+
+def test_markdown_table_mismatched_time_measurement_pair_is_flagged() -> None:
+    report = _evaluate(
+        """| Time | Service Metrics | Dependency | Deployment |
+| --- | --- | --- | --- |
+| 14:05 | Error rate 4.1% and p95 latency 2,840 ms | post-14:00 | deployed 13:58 |
+"""
+    )
+
+    associations = [
+        finding
+        for finding in report.unsupported_specifics
+        if finding.kind is GroundingFindingKind.UNSUPPORTED_ASSOCIATION
+    ]
+    assert len(associations) == 1
+    assert associations[0].value == "14:05 -> 2840ms"
