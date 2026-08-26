@@ -26,6 +26,18 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def _rotated_patterns(
+    patterns: Sequence[AutonomyPattern],
+    *,
+    run_number: int,
+) -> tuple[AutonomyPattern, ...]:
+    ordered = tuple(patterns)
+    if not ordered:
+        return ()
+    offset = (run_number - 1) % len(ordered)
+    return ordered[offset:] + ordered[:offset]
+
+
 def run_benchmark(
     *,
     config: BenchmarkConfig,
@@ -41,7 +53,7 @@ def run_benchmark(
     first_attempt = True
 
     for run_number in range(1, config.runs + 1):
-        for pattern in patterns:
+        for pattern in _rotated_patterns(patterns, run_number=run_number):
             if not first_attempt and config.run_interval_seconds > 0:
                 sleep(config.run_interval_seconds)
             first_attempt = False
