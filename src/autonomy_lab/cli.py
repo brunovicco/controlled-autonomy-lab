@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -90,6 +91,50 @@ def _run_payload(run: PatternRun, grounding: GroundingReport | None = None) -> d
     if grounding is not None:
         payload["grounding"] = _grounding_payload(grounding)
     return payload
+
+
+def _run_failure_payload(
+    *,
+    pattern: AutonomyPattern,
+    incident_id: str,
+    status: str,
+    error: ModelProviderError,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "pattern": pattern.value,
+        "incident_id": incident_id,
+        "status": status,
+        "error": str(error),
+    }
+    if isinstance(error, ModelRateLimitError) and error.retry_after is not None:
+        payload["retry_after"] = error.retry_after
+    return payload
+
+
+def _print_run_failure(
+    *,
+    pattern: AutonomyPattern,
+    incident_id: str,
+    status: str,
+    error: ModelProviderError,
+    as_json: bool,
+) -> int:
+    payload = _run_failure_payload(
+        pattern=pattern,
+        incident_id=incident_id,
+        status=status,
+        error=error,
+    )
+    if as_json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(f"pattern: {pattern.value}", file=sys.stderr)
+        print(f"status:  {status}", file=sys.stderr)
+        print(f"error:   {error}", file=sys.stderr)
+        retry_after = payload.get("retry_after")
+        if retry_after is not None:
+            print(f"retry after: {retry_after}", file=sys.stderr)
+    return 2
 
 
 def _print_grounding(report: GroundingReport) -> None:
@@ -186,7 +231,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run":
         pattern = AutonomyPattern(args.pattern)
-        run = _build_runner(pattern, store=store, model=model).run(args.incident)
+        try:
+            run = _build_runner(pattern, store=store, model=model).run(args.incident)
+        except ModelRateLimitError as exc:
+            return _print_run_failure(
+                pattern=pattern,
+                incident_id=args.incident,
+                status="rate_limited",
+                error=exc,
+                as_json=args.json,
+            )
+        except ModelProviderError as exc:
+            return _print_run_failure(
+                pattern=pattern,
+                incident_id=args.incident,
+                status="provider_error",
+                error=exc,
+                as_json=args.json,
+            )
         _record_if_requested(run, args.trace_file)
         grounding = None
         if args.grounding:
