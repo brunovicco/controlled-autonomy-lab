@@ -1,0 +1,58 @@
+name: patch-grounding-docs
+
+on:
+  push:
+    branches:
+      - feat/grounding-evaluation-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/grounding-evaluation-v1
+      - name: Document association grounding
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/GROUNDING.md")
+          text = path.read_text()
+          original = text
+
+          old = "- whether an answer preserves explicit uncertainty language;\n- whether an otherwise unsupported time/measurement appears under a recommendation/action section rather than as an observed fact.\n"
+          new = "- whether an answer preserves explicit uncertainty language;\n- timestamp-to-measurement associations in Markdown table rows when the fixture encodes an exact pair;\n- whether an otherwise unsupported time/measurement appears under a recommendation/action section rather than as an observed fact.\n"
+          if new not in text:
+              assert old in text
+              text = text.replace(old, new, 1)
+
+          old = "| `unsupported-measurement` | a factual measurement, percentage, or duration is neither present nor explicitly derivable from the fixture |\n| `proposed-parameter` |"
+          new = "| `unsupported-measurement` | a factual measurement, percentage, or duration is neither present nor explicitly derivable from the fixture |\n| `unsupported-association` | individually supported values are paired in a Markdown table row in a way the fixture does not support |\n| `proposed-parameter` |"
+          if new not in text:
+              assert old in text
+              text = text.replace(old, new, 1)
+
+          marker = "The evaluator deduplicates repeated unsupported specifics so one invented value repeated multiple times does not artificially inflate the score.\n"
+          addition = '''\n### Supported values can still form an unsupported association\n\nGrounding is not only a bag-of-values problem. The live Groq run exposed a row that placed the supported value `2840ms` at the supported timestamp `14:05`, even though the fixture only associates `2840ms` with `14:10`. Grounding Evaluation v1 now detects this narrow relational case in Markdown tables whose first column contains the row timestamp.\n\n```text\n| 14:10 | p95 latency 2840ms | -> supported association\n| 14:05 | p95 latency 2840ms | -> unsupported-association\n```\n\nThis check is intentionally structural. It does not claim to resolve arbitrary temporal or relational statements in free-form prose. Cells that contain their own timestamp are skipped rather than forced into the row timestamp, and proposal sections remain outside factual association scoring.\n\n'''
+          if addition not in text:
+              assert marker in text
+              text = text.replace(marker, marker + addition, 1)
+
+          if text != original:
+              path.write_text(text)
+          PY
+
+          if git diff --quiet; then
+            echo "Documentation patch already applied"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/GROUNDING.md
+          git commit -m "docs: explain unsupported associations"
+          git push origin HEAD:feat/grounding-evaluation-v1
