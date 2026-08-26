@@ -181,7 +181,6 @@ def _is_supported_pp(value: str, derived_pp: set[float]) -> bool:
         return False
 
 
-
 def _reference_time_measurement_associations(reference: str) -> set[tuple[str, str]]:
     """Extract exact timestamp-to-measurement pairs encoded by the fixture."""
     associations: set[tuple[str, str]] = set()
@@ -250,7 +249,6 @@ def _approximate_supported_measurement(
         if reference_value.quantize(quantum) == candidate_value:
             return supported
     return None
-
 
 
 def _markdown_table_association_findings(
