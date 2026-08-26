@@ -152,8 +152,12 @@ def _is_direct_textual_support(
 
 
 def _shared_content_ngram(left: str, right: str, *, size: int) -> bool:
-    left_tokens = [token for token in _normalized_text(left).split() if token not in _STOPWORDS]
-    right_tokens = [token for token in _normalized_text(right).split() if token not in _STOPWORDS]
+    left_tokens = [
+        token for token in _normalized_text(left).split() if token not in _STOPWORDS
+    ]
+    right_tokens = [
+        token for token in _normalized_text(right).split() if token not in _STOPWORDS
+    ]
     if len(left_tokens) < size or len(right_tokens) < size:
         return False
     left_ngrams = {
@@ -271,11 +275,14 @@ class DeterministicClaimEvaluatorV2:
                 evidence_sources=sources,
             )
 
-        if _is_direct_textual_support(
-            candidate.text,
-            incident=incident,
-            evidence=evidence,
-        ) or _has_high_confidence_fixture_support(candidate.text, evidence=evidence):
+        if (
+            _is_direct_textual_support(
+                candidate.text,
+                incident=incident,
+                evidence=evidence,
+            )
+            or _has_high_confidence_fixture_support(candidate.text, evidence=evidence)
+        ):
             return ClaimEvaluation(
                 claim=candidate.text,
                 kind=ClaimKind.SUPPORTED_FACT,
