@@ -132,21 +132,21 @@ The fixture creates correlation without proving causality. Good output should di
 src/autonomy_lab/
 ├── domain/
 │   ├── autonomy.py         # provider-neutral run contracts
-│   ├── benchmark.py        # reproducible benchmark contracts
+│   ├── benchmark.py        # benchmark records and summaries
 │   └── grounding.py        # deterministic grounding result types
 ├── application/
 │   ├── model_ports.py      # common text + tool-use model boundary
 │   ├── model_errors.py     # provider-neutral error contract
-│   ├── benchmark.py        # repeated benchmark orchestration + aggregation
+│   ├── benchmark.py        # repeated benchmark orchestration
 │   ├── grounding.py        # fixture-backed grounding evaluator
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
 │   ├── anthropic.py
 │   ├── openai_compatible.py
 │   ├── providers.py        # environment composition/presets
-│   ├── benchmark_metadata.py
-│   ├── benchmark_artifacts.py
 │   ├── incidents.py
+│   ├── benchmark_artifacts.py
+│   ├── benchmark_metadata.py
 │   └── run_log.py
 └── cli.py                  # command-line interface
 ```
@@ -203,7 +203,7 @@ uv run autonomy-lab benchmark \
   --output results/groq-gpt-oss-20b-900
 ```
 
-The `30s` interval above is a conservative starting point for the currently documented Groq Free Plan limits of `openai/gpt-oss-20b`; provider/account limits can differ and change over time. For other providers or plans, choose and record the interval appropriate to that environment.
+The `30s` interval above is a conservative starting point for the currently documented Groq Free Plan limits of `openai/gpt-oss-20b`; provider/account limits can differ and change over time. In live smoke calibration on 2026-08-26 with `LLM_MAX_TOKENS=900`, a `2s` interval completed `2/6` patterns while `30s` completed `6/6` with exit code `0`. This is a dated workload-specific observation, not a permanent provider guarantee.
 
 Each cycle contains all six patterns, but the starting pattern rotates deterministically on later cycles. This reduces fixed-order exposure to provider quota drift without introducing random ordering.
 
