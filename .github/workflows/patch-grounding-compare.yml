@@ -1,0 +1,161 @@
+name: patch-grounding-compare
+
+on:
+  push:
+    branches:
+      - feat/grounding-evaluation-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/grounding-evaluation-v1
+      - name: Patch CLI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/autonomy_lab/cli.py")
+          text = path.read_text()
+
+          old = "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n"
+          new = (
+              "from autonomy_lab.adapters.anthropic import ModelProviderError as AnthropicProviderError\n"
+              "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n"
+          )
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = "from autonomy_lab.application.model_ports import ModelClient\n"
+          new = (
+              "from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError\n"
+              "from autonomy_lab.application.model_ports import ModelClient\n"
+          )
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = "from autonomy_lab.domain.grounding import GroundingReport\n"
+          new = "from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport\n"
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          start = text.index("def _grounding_payload(")
+          end = text.index("\n\ndef _run_payload", start)
+          replacement = '''def _findings_payload(
+              findings: tuple[GroundingFinding, ...],
+          ) -> list[dict[str, object]]:
+              return [
+                  {
+                      "kind": finding.kind.value,
+                      "value": finding.value,
+                      "context": finding.context,
+                  }
+                  for finding in findings
+              ]
+
+
+          def _grounding_payload(report: GroundingReport) -> dict[str, object]:
+              return {
+                  "supported_specifics": list(report.supported_specifics),
+                  "unsupported_specifics": _findings_payload(report.unsupported_specifics),
+                  "proposed_specifics": _findings_payload(report.proposed_specifics),
+                  "causality_overclaims": _findings_payload(report.causality_overclaims),
+                  "uncertainty_preserved": report.uncertainty_preserved,
+                  "specific_grounding_ratio": round(report.specific_grounding_ratio, 4),
+              }
+          '''
+          text = text[:start] + replacement.rstrip() + text[end:]
+
+          old = '    print(f"unsupported specifics: {report.unsupported_count}")\n'
+          new = old + '    print(f"proposed parameters:   {report.proposed_count}")\n'
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = "    for finding in (*report.unsupported_specifics, *report.causality_overclaims):\n"
+          new = (
+              "    for finding in (\n"
+              "        *report.unsupported_specifics,\n"
+              "        *report.proposed_specifics,\n"
+              "        *report.causality_overclaims,\n"
+              "    ):\n"
+          )
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          marker = "\ndef main(argv: Sequence[str] | None = None) -> int:\n"
+          helper = '''
+
+          def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
+              print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
+          '''
+          assert marker in text
+          text = text.replace(marker, helper.rstrip() + marker, 1)
+
+          old = '''    if args.command == "compare":
+              evaluator = DeterministicGroundingEvaluator()
+              print(
+                  "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
+                  "unsupported | causality | uncertainty"
+              )
+              print("-" * 122)
+              for pattern in AutonomyPattern:
+                  run = _build_runner(pattern, store=store, model=model).run(args.incident)
+                  _record_if_requested(run, args.trace_file)
+                  grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
+                  uncertainty = "yes" if grounding.uncertainty_preserved else "no"
+                  print(
+                      f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
+                      f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
+                      f"{grounding.unsupported_count} | {grounding.causality_overclaim_count} | "
+                      f"{uncertainty}"
+                  )
+              return 0
+          '''
+          new = '''    if args.command == "compare":
+              evaluator = DeterministicGroundingEvaluator()
+              had_provider_errors = False
+              print(
+                  "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
+                  "unsupported | proposed | causality | uncertainty | status"
+              )
+              print("-" * 145)
+              for pattern in AutonomyPattern:
+                  try:
+                      run = _build_runner(pattern, store=store, model=model).run(args.incident)
+                  except ModelRateLimitError:
+                      had_provider_errors = True
+                      _print_compare_failure(pattern, "rate_limited")
+                      continue
+                  except (ModelProviderError, AnthropicProviderError):
+                      had_provider_errors = True
+                      _print_compare_failure(pattern, "provider_error")
+                      continue
+                  _record_if_requested(run, args.trace_file)
+                  grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
+                  uncertainty = "yes" if grounding.uncertainty_preserved else "no"
+                  print(
+                      f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
+                      f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
+                      f"{grounding.unsupported_count} | {grounding.proposed_count} | "
+                      f"{grounding.causality_overclaim_count} | {uncertainty} | ok"
+                  )
+              return 2 if had_provider_errors else 0
+          '''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/autonomy_lab/cli.py
+          git commit -m "feat: make compare fail soft on provider limits"
+          git push origin HEAD:feat/grounding-evaluation-v1
