@@ -6,9 +6,15 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from autonomy_lab.adapters.benchmark_artifacts import (
+    assert_benchmark_output_available,
+    write_benchmark_artifacts,
+)
+from autonomy_lab.adapters.benchmark_metadata import benchmark_environment_from_env
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.adapters.providers import client_from_env
 from autonomy_lab.adapters.run_log import MetadataRunRecorder
+from autonomy_lab.application.benchmark import run_benchmark, summarize_benchmark
 from autonomy_lab.application.comparison import (
     PatternRunner,
     repeat_pattern,
@@ -26,6 +32,7 @@ from autonomy_lab.application.patterns.evaluator_optimizer import (
 from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
 from autonomy_lab.application.patterns.routing import RoutedIncidentAnalysis
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
+from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkStatus
 from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport
 
 
@@ -191,6 +198,26 @@ def _grounding_for_run(
     return evaluator.evaluate(answer=run.answer, incident=incident, evidence=evidence)
 
 
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def _non_negative_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be zero or positive") from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be zero or positive")
+    return parsed
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="controlled-autonomy-lab",
@@ -212,15 +239,108 @@ def _parser() -> argparse.ArgumentParser:
     compare_parser = subparsers.add_parser("compare", help="execute every pattern once")
     compare_parser.add_argument("--incident", default="INC-001")
 
+    benchmark_parser = subparsers.add_parser(
+        "benchmark",
+        help="run repeated architecture cycles and persist reproducible metadata-only results",
+    )
+    benchmark_parser.add_argument("--incident", default="INC-001")
+    benchmark_parser.add_argument("--runs", type=_positive_int, default=5)
+    benchmark_parser.add_argument("--output", default="results")
+    benchmark_parser.add_argument(
+        "--run-interval-seconds",
+        type=_non_negative_float,
+        default=0.0,
+        help="pause between benchmark attempts without changing calls inside a pattern",
+    )
+    benchmark_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="replace runs.jsonl, summary.csv and summary.md when they already exist",
+    )
+
     repeat_parser = subparsers.add_parser("repeat", help="measure trajectory variance")
     repeat_parser.add_argument("pattern", choices=[pattern.value for pattern in AutonomyPattern])
     repeat_parser.add_argument("--incident", default="INC-001")
-    repeat_parser.add_argument("--runs", type=int, default=5)
+    repeat_parser.add_argument("--runs", type=_positive_int, default=5)
     return parser
 
 
 def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
     print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
+
+
+def _run_reproducible_benchmark(
+    *,
+    args: argparse.Namespace,
+    store: InMemoryIncidentStore,
+    model: ModelClient,
+) -> int:
+    output_dir = Path(args.output)
+    try:
+        assert_benchmark_output_available(output_dir, overwrite=args.overwrite)
+    except FileExistsError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    environment = benchmark_environment_from_env()
+    config = BenchmarkConfig(
+        incident_id=args.incident,
+        runs=args.runs,
+        provider=environment.provider,
+        model=environment.model,
+        max_tokens=environment.max_tokens,
+        timeout_seconds=environment.timeout_seconds,
+        reasoning_effort=environment.reasoning_effort,
+        run_interval_seconds=args.run_interval_seconds,
+        git_commit=environment.git_commit,
+    )
+    evaluator = DeterministicGroundingEvaluator()
+    patterns = tuple(AutonomyPattern)
+
+    def execute(pattern: AutonomyPattern) -> PatternRun:
+        return _build_runner(pattern, store=store, model=model).run(args.incident)
+
+    def evaluate(run: PatternRun) -> GroundingReport:
+        return _grounding_for_run(run, store=store, evaluator=evaluator)
+
+    records = run_benchmark(
+        config=config,
+        patterns=patterns,
+        run_pattern=execute,
+        evaluate_run=evaluate,
+        on_success=lambda run: _record_if_requested(run, args.trace_file),
+    )
+    summaries = summarize_benchmark(records, patterns=patterns)
+    artifacts = write_benchmark_artifacts(
+        output_dir=output_dir,
+        config=config,
+        records=records,
+        summaries=summaries,
+        overwrite=args.overwrite,
+    )
+    partial = any(record.status is not BenchmarkStatus.OK for record in records)
+
+    print(f"benchmark: {'partial' if partial else 'complete'}")
+    print(f"provider:  {config.provider}")
+    print(f"model:     {config.model}")
+    print(f"commit:    {config.git_commit}")
+    print(f"runs:      {config.runs} per pattern")
+    print(f"jsonl:     {artifacts.runs_jsonl}")
+    print(f"csv:       {artifacts.summary_csv}")
+    print(f"markdown:  {artifacts.summary_markdown}")
+    print("\npattern | success | rate_limited | p50_ms | grounding | trajectories")
+    print("-" * 78)
+    for summary in summaries:
+        latency = "-" if summary.p50_latency_ms is None else f"{summary.p50_latency_ms:.1f}"
+        grounding = (
+            "-" if summary.mean_grounding_ratio is None else f"{summary.mean_grounding_ratio:.1%}"
+        )
+        print(
+            f"{summary.pattern.value} | {summary.completed}/{summary.attempted} | "
+            f"{summary.rate_limited} | {latency} | {grounding} | "
+            f"{summary.unique_trajectories}"
+        )
+    return 2 if partial else 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -289,6 +409,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{grounding.causality_overclaim_count} | {uncertainty} | ok"
             )
         return 2 if had_provider_errors else 0
+
+    if args.command == "benchmark":
+        return _run_reproducible_benchmark(args=args, store=store, model=model)
 
     pattern = AutonomyPattern(args.pattern)
     runner = _build_runner(pattern, store=store, model=model)

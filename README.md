@@ -132,10 +132,12 @@ The fixture creates correlation without proving causality. Good output should di
 src/autonomy_lab/
 ├── domain/
 │   ├── autonomy.py         # provider-neutral run contracts
+│   ├── benchmark.py        # benchmark records and summaries
 │   └── grounding.py        # deterministic grounding result types
 ├── application/
 │   ├── model_ports.py      # common text + tool-use model boundary
 │   ├── model_errors.py     # provider-neutral error contract
+│   ├── benchmark.py        # repeated benchmark orchestration
 │   ├── grounding.py        # fixture-backed grounding evaluator
 │   └── patterns/           # six autonomy patterns
 ├── adapters/
@@ -143,6 +145,8 @@ src/autonomy_lab/
 │   ├── openai_compatible.py
 │   ├── providers.py        # environment composition/presets
 │   ├── incidents.py
+│   ├── benchmark_artifacts.py
+│   ├── benchmark_metadata.py
 │   └── run_log.py
 └── cli.py                  # command-line interface
 ```
@@ -187,6 +191,41 @@ uv run autonomy-lab repeat agent --incident INC-001 --runs 5
 
 Live runs can consume quota or paid tokens depending on the selected provider.
 
+## Reproducible Benchmark v1
+
+Run repeated cycles across all six patterns and persist the experiment:
+
+```bash
+uv run autonomy-lab benchmark \
+  --incident INC-001 \
+  --runs 5 \
+  --run-interval-seconds 30 \
+  --output results/groq-gpt-oss-20b-900
+```
+
+The `30s` interval above is a conservative starting point for the currently documented Groq Free Plan limits of `openai/gpt-oss-20b`; provider/account limits can differ and change over time. In live smoke calibration on 2026-08-26 with `LLM_MAX_TOKENS=900`, a `2s` interval completed `2/6` patterns while `30s` completed `6/6` with exit code `0`. Those smoke runs are pacing calibration with `n=1`, not architecture-quality conclusions.
+
+Each cycle contains all six patterns, but the starting pattern rotates deterministically on later cycles. This reduces fixed-order exposure to provider quota drift without introducing random ordering.
+
+`--run-interval-seconds` pauses only **between benchmark attempts**. It does not serialize calls inside a pattern, so `parallel` remains concurrent and chaining/evaluator/agent retain their original multi-call behavior. There are no hidden retries.
+
+The benchmark writes:
+
+```text
+results/groq-gpt-oss-20b-900/
+├── runs.jsonl
+├── summary.csv
+└── summary.md
+```
+
+The artifacts contain provider/model/configuration metadata, execution metrics, deterministic grounding counts, reliability status and successful trajectories. They remain metadata-only: prompts, model answers, evidence bodies, tool arguments/results and credentials are excluded.
+
+Existing benchmark files are protected by default. Use `--overwrite` only when replacement is intentional.
+
+A complete benchmark returns exit code `0`. If one or more attempts are rate-limited or fail at the provider boundary, remaining attempts continue, partial artifacts are preserved, and the command returns `2`.
+
+See [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md) for methodology, output schema, pacing semantics, aggregation rules and limitations.
+
 ## Grounding Evaluation v1
 
 Grounding Evaluation v1 is deterministic: it does not call another LLM and treats the bounded incident fixture as the source of truth.
@@ -197,6 +236,7 @@ It currently checks:
 - timestamps;
 - measurements, percentages and durations;
 - exact percentage-point deltas derivable from fixture percentages;
+- timestamp-to-measurement associations in supported Markdown table structures;
 - strong causal language without a local or section-level uncertainty qualifier;
 - explicit preservation of uncertainty;
 - proposal sections, where new time/measurement values are tracked as `proposed-parameter` instead of being counted as unsupported facts.
