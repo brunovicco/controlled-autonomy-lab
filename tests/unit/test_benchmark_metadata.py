@@ -17,7 +17,6 @@ def test_benchmark_metadata_uses_non_secret_provider_settings(tmp_path: Path) ->
             "GROQ_API_KEY": "must-not-be-recorded",
             "LLM_MAX_TOKENS": "900",
             "LLM_TIMEOUT_SECONDS": "45",
-            "LLM_REASONING_EFFORT": "low",
         },
         repository_root=tmp_path,
     )
@@ -26,7 +25,7 @@ def test_benchmark_metadata_uses_non_secret_provider_settings(tmp_path: Path) ->
     assert environment.model == "openai/gpt-oss-20b"
     assert environment.max_tokens == 900
     assert environment.timeout_seconds == 45.0
-    assert environment.reasoning_effort == "low"
+    assert environment.reasoning_effort == "medium"
     assert environment.git_commit == "abc123"
     assert "must-not-be-recorded" not in repr(environment)
 
@@ -43,3 +42,4 @@ def test_benchmark_metadata_prefers_explicit_commit(tmp_path: Path) -> None:
 
     assert environment.git_commit == "def456"
     assert environment.model == "openrouter/free"
+    assert environment.reasoning_effort is None
