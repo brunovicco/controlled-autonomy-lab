@@ -46,7 +46,9 @@ class OpenAICompatibleChatClient:
             or parsed.query
             or parsed.fragment
         ):
-            raise ValueError("base_url must be a plain HTTPS origin/path without credentials or query")
+            raise ValueError(
+                "base_url must be a plain HTTPS origin/path without credentials or query"
+            )
 
         self._api_key = api_key
         self._host = parsed.hostname
@@ -70,8 +72,8 @@ class OpenAICompatibleChatClient:
             }
         )
         choice = self._first_choice(response)
-        message = self._choice_message(choice)
-        text = message.get("content")
+        response_message = self._choice_message(choice)
+        text = response_message.get("content")
         if not isinstance(text, str) or not text.strip():
             raise ModelProviderError(f"{self._provider_label} response did not contain text")
         return ModelTurn(
@@ -112,9 +114,9 @@ class OpenAICompatibleChatClient:
             }
         )
         choice = self._first_choice(response)
-        message = self._choice_message(choice)
-        text = message.get("content")
-        tool_calls = self._extract_tool_calls(message)
+        response_message = self._choice_message(choice)
+        text = response_message.get("content")
+        tool_calls = self._extract_tool_calls(response_message)
         return AgentTurn(
             message=AgentMessage(
                 role="assistant",
@@ -234,7 +236,10 @@ class OpenAICompatibleChatClient:
                     for call in message.tool_calls
                 ]
             return [payload]
-        return [OpenAICompatibleChatClient._tool_result_to_api(result) for result in message.tool_results]
+        return [
+            OpenAICompatibleChatClient._tool_result_to_api(result)
+            for result in message.tool_results
+        ]
 
     @staticmethod
     def _tool_result_to_api(result: ToolResult) -> dict[str, object]:
