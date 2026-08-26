@@ -10,12 +10,12 @@ from autonomy_lab.domain.grounding import (
     GroundingReport,
 )
 
-_VERSION_RE = re.compile(r"(?<![\w.])v\d+\.\d+\.\d+(?![\w.])", re.IGNORECASE)
+_VERSION_RE = re.compile(r"(?<![\w.])v\d+\.\d+\.\d+(?!\w|\.\d)", re.IGNORECASE)
 _TIME_RE = re.compile(r"(?<!\d)(?:[01]?\d|2[0-3]):[0-5]\d(?!\d)")
 _NUMBER_PATTERN = r"(?:\d{1,3}(?:[,\u202f\xa0 ]\d{3})+|\d+)(?:\.\d+)?"
 _MEASUREMENT_RE = re.compile(
     rf"(?<![\w.]){_NUMBER_PATTERN}"
-    rf"(?:\s*[–—-]\s*{_NUMBER_PATTERN})?"
+    rf"(?:\s*[\u2013\u2014-]\s*{_NUMBER_PATTERN})?"
     r"\s*(?:%|pp|ms|milliseconds?|secs?|seconds?|s|mins?|minutes?|hours?|hrs?)"
     r"(?!\w)",
     re.IGNORECASE,
@@ -50,7 +50,7 @@ def _normalize_time(value: str) -> str:
 
 def _normalize_measurement(value: str) -> str:
     normalized = value.lower().replace("\u202f", " ").replace("\xa0", " ")
-    normalized = normalized.replace("–", "-").replace("—", "-")
+    normalized = normalized.replace("\u2013", "-").replace("\u2014", "-")
     normalized = re.sub(r"\s+", "", normalized).replace(",", "")
     normalized = re.sub(r"milliseconds?$", "ms", normalized)
     normalized = re.sub(r"(?:secs?|seconds?)$", "s", normalized)
@@ -107,8 +107,12 @@ class DeterministicGroundingEvaluator:
     ) -> GroundingReport:
         """Compare answer specifics with the exact incident/evidence fixture."""
         reference = _reference_text(incident, evidence)
-        supported_versions = {_normalize_version(item.group()) for item in _VERSION_RE.finditer(reference)}
-        supported_times = {_normalize_time(item.group()) for item in _TIME_RE.finditer(reference)}
+        supported_versions = {
+            _normalize_version(item.group()) for item in _VERSION_RE.finditer(reference)
+        }
+        supported_times = {
+            _normalize_time(item.group()) for item in _TIME_RE.finditer(reference)
+        }
         supported_measurements = {
             _normalize_measurement(item.group()) for item in _MEASUREMENT_RE.finditer(reference)
         }
