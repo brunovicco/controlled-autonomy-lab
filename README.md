@@ -47,15 +47,19 @@ export LLM_PROVIDER=openrouter
 export OPENROUTER_API_KEY="..."
 export OPENROUTER_MODEL=openrouter/free
 
-uv run python -m autonomy_lab.cli \
-  run augmented --incident INC-001
+uv run autonomy-lab run augmented --incident INC-001
 ```
 
 Try the bounded agent with the same provider configuration:
 
 ```bash
-uv run python -m autonomy_lab.cli \
-  run agent --incident INC-001
+uv run autonomy-lab run agent --incident INC-001
+```
+
+The equivalent module form is also supported:
+
+```bash
+uv run python -m autonomy_lab.cli run augmented --incident INC-001
 ```
 
 Or use Groq's Free Plan:
@@ -134,8 +138,7 @@ src/autonomy_lab/
 │   ├── providers.py        # environment composition/presets
 │   ├── incidents.py
 │   └── run_log.py
-└── entrypoints/
-    └── autonomy_cli.py
+└── cli.py                  # command-line interface
 ```
 
 The project started from [`claude-python-engineering-harness`](https://github.com/brunovicco/claude-python-engineering-harness), but generic scaffold not used by this case has been removed. The deterministic quality runner and architecture validator were retained because they still enforce project behavior.
@@ -147,19 +150,19 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 One pattern:
 
 ```bash
-uv run python -m autonomy_lab.cli run augmented --incident INC-001
+uv run autonomy-lab run augmented --incident INC-001
 ```
 
 All patterns:
 
 ```bash
-uv run python -m autonomy_lab.cli compare --incident INC-001
+uv run autonomy-lab compare --incident INC-001
 ```
 
 Trajectory variance:
 
 ```bash
-uv run python -m autonomy_lab.cli repeat agent --incident INC-001 --runs 5
+uv run autonomy-lab repeat agent --incident INC-001 --runs 5
 ```
 
 Live runs can consume quota or paid tokens depending on the selected provider.
@@ -181,7 +184,7 @@ Deterministic code enforces `max_steps=6`, `max_tool_calls=8`, the exact tool-na
 ## Metadata-only traces
 
 ```bash
-uv run python -m autonomy_lab.cli \
+uv run autonomy-lab \
   --trace-file traces/runs.jsonl \
   repeat agent --runs 5
 ```
