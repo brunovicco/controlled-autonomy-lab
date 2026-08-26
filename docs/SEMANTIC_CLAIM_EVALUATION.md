@@ -72,6 +72,19 @@ The adapter validates:
 
 Malformed or unbounded semantic output is an evaluation failure, not permission to guess.
 
+## Deterministic pre-filtering
+
+Live calibration showed that not every deterministic miss needs an LLM. Two initially unsupported claims were near-verbatim facts already present in bounded `deployments` or `dependencies` evidence:
+
+- the deployment included a new payment-provider timeout configuration;
+- no confirmed payment-provider outage was reported.
+
+The deterministic baseline therefore includes a deliberately narrow near-verbatim matcher for high-confidence deployment/dependency paraphrases before semantic escalation.
+
+This matcher preserves negation polarity so a claim such as `confirmed outage` cannot be accepted from evidence that says `no confirmed outage`. It intentionally does not cover `previous-incidents`; historical evidence remains conservative because confusing a previous cause with the current incident is a materially different failure mode.
+
+The semantic layer is therefore reserved for genuinely ambiguous conservative misses rather than acting as a general second pass over every claim.
+
 ## Merge output
 
 The v2.1 result keeps three layers visible for each claim:
@@ -136,19 +149,69 @@ That creates a methodological risk: a model may be biased toward accepting its o
 
 A stronger later phase should decouple generation from evaluation, for example with a separately configured evaluator provider/model and cross-model calibration against static fixtures.
 
-## Current calibration target
+## Live calibration results
 
-The observed OpenAI bounded-agent fixture is the first target. Deterministic v2 currently reports:
+Two live OpenAI `gpt-5.6-luna` bounded-agent runs were used to calibrate the v2.1 contract. Both preserved 100% Grounding v1 specific grounding, had no unsupported specifics or causality overclaims, respected the strict semantic JSON contract, and exited successfully.
+
+### First smoke — before deterministic refinement
+
+The generated answer produced three conservative deterministic misses. The semantic layer upgraded all three correctly:
+
+1. deployment included a new payment-provider timeout configuration;
+2. no confirmed payment-provider outage;
+3. prior incident involved an upstream timeout mismatch and was historical context.
+
+Observed semantic usage:
+
+- semantic model calls: `3`;
+- semantic input tokens: `1161`;
+- semantic output tokens: `174`;
+- disagreements: `3`;
+- merged support ratio: `1.0`.
+
+The first two upgrades were unnecessary LLM work because those facts were already near-verbatim in bounded current-incident evidence. That observation motivated the deterministic pre-filter refinement above.
+
+### Second smoke — after deterministic refinement
+
+A newly generated answer was evaluated after the refinement. Because the answer text changed between runs, raw claim counts are not treated as a paired before/after quality comparison. The second smoke is used only to validate routing/selectivity of the evaluation layers.
+
+Deterministic v2 classified:
 
 - 4 supported facts;
-- 4 supported inferences;
+- 3 supported inferences;
 - 4 proposed actions;
 - 1 unsupported claim;
-- support ratio `8/9` (`88.9%`).
+- support ratio `7/8` (`87.5%`).
 
-The only unsupported claim is the historical-incident paraphrase described above. A correctly bounded semantic evaluator should be able to upgrade that specific claim using `previous-incidents` evidence while leaving the rest of the deterministic result untouched.
+The only unsupported claim was the historical paraphrase:
 
-This target is encoded in static unit tests and does not require provider quota.
+> A prior incident had similar symptoms involving an upstream timeout mismatch, but that is historical context only.
+
+The semantic evaluator received only that claim, returned `SUPPORTED_FACT` using `previous-incidents`, and produced:
+
+- semantic model calls: `1`;
+- semantic input tokens: `394`;
+- semantic output tokens: `93`;
+- disagreements: `1`;
+- final supported facts: `5`;
+- final supported inferences: `3`;
+- final proposed actions: `4`;
+- final unsupported claims: `0`;
+- merged support ratio: `1.0`.
+
+This validates the intended execution policy for v2.1: deterministic checks resolve exact and high-confidence bounded facts, Grounding v1 hard failures remain fail-closed, and semantic evaluation is invoked only for conservative misses that require actual entailment.
+
+## Interpretation boundary
+
+The live results validate implementation behavior, not semantic-evaluator accuracy in general. In particular:
+
+- the same model generated and judged the answer;
+- the fixture contains one incident and one semantic calibration class;
+- two live runs are insufficient for statistical conclusions;
+- a `1.0` merged support ratio is not proof that the full answer is universally correct;
+- semantic upgrades are not part of the repeated cross-provider benchmark dataset.
+
+The strongest supported conclusion is architectural: the evaluator can preserve deterministic authority while selectively escalating ambiguous claims and keeping that extra model cost separately observable.
 
 ## Not in v2.1
 
@@ -162,4 +225,4 @@ This phase deliberately does not add:
 - retries for malformed evaluator output;
 - a mechanism for semantic judgement to override Grounding v1 hard failures.
 
-Those are separate design decisions and should be evaluated only after live calibration of the bounded contract.
+Those are separate design decisions. The next meaningful evaluation step is to decouple generation from semantic judgement and calibrate cross-model disagreement against static fixtures.
