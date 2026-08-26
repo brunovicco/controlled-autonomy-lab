@@ -234,7 +234,9 @@ class OpenAIResponsesClient:
             if not isinstance(call_id, str) or not isinstance(name, str):
                 raise ModelProviderError("OpenAI Responses API returned malformed function call")
             if not isinstance(arguments_json, str):
-                raise ModelProviderError("OpenAI Responses API returned malformed function arguments")
+                raise ModelProviderError(
+                    "OpenAI Responses API returned malformed function arguments"
+                )
             try:
                 arguments = json.loads(arguments_json)
             except json.JSONDecodeError as exc:
