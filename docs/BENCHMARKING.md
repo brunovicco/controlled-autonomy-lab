@@ -50,7 +50,14 @@ There are no automatic retries in Benchmark v1.
 
 ### Groq Free Plan calibration
 
-The first live smoke benchmark of `openai/gpt-oss-20b` used a 2-second interval. `augmented` and `chaining` completed, while the remaining four patterns were rate-limited. That is a valid benchmark result, but it also demonstrates that a 2-second interval is too aggressive for this workload under the observed Free Plan conditions.
+Two live smoke benchmarks were run on 2026-08-26 with `openai/gpt-oss-20b` and `LLM_MAX_TOKENS=900`:
+
+| Interval | Completed patterns | Result |
+| --- | ---: | --- |
+| `2s` | `2/6` | `augmented` and `chaining` completed; the remaining four patterns were rate-limited |
+| `30s` | `6/6` | all six patterns completed; benchmark exit code `0` |
+
+The 30-second smoke completed with these single-run grounding ratios: augmented `78.6%`, chaining `20.0%`, routing `84.6%`, parallel `85.7%`, evaluator-optimizer `91.7%`, and agent `78.6%`. These are calibration observations with `n=1`, not comparative conclusions; repeated cycles are required before interpreting architecture-level quality differences.
 
 As of 2026-08-26, Groq's public Free Plan table lists `openai/gpt-oss-20b` at 30 RPM, 1K RPD, 8K TPM, and 200K TPD. Groq also states that rate limits apply at the organization level, that any configured limit can trigger first, and that the account Limits page is the source of truth for exact organization-specific values.
 
