@@ -1,7 +1,7 @@
 """Deterministic grounding checks against the bounded incident fixture."""
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 from autonomy_lab.domain.grounding import (
@@ -21,6 +21,11 @@ _MEASUREMENT_RE = re.compile(
     re.IGNORECASE,
 )
 _PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
+_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(?P<title>.+?)\s*$", re.MULTILINE)
+_PROPOSAL_HEADING_RE = re.compile(
+    r"\b(?:recommend\w*|next[- ]?steps?|actions?|plan|checks?|mitigation|remediation)\b",
+    re.IGNORECASE,
+)
 _CAUSALITY_RE = re.compile(
     r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
     re.IGNORECASE,
@@ -74,6 +79,26 @@ def _unique(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(values))
 
 
+def _measurement_matches(text: str) -> Iterator[re.Match[str]]:
+    """Yield measurements while excluding spans that overlap timestamp tokens."""
+    time_spans = tuple((match.start(), match.end()) for match in _TIME_RE.finditer(text))
+    for match in _MEASUREMENT_RE.finditer(text):
+        if any(match.start() < end and match.end() > start for start, end in time_spans):
+            continue
+        yield match
+
+
+def _section_heading_for(text: str, position: int) -> str:
+    heading = ""
+    for match in _HEADING_RE.finditer(text, 0, position):
+        heading = match.group("title")
+    return heading
+
+
+def _is_proposed_context(text: str, position: int) -> bool:
+    return bool(_PROPOSAL_HEADING_RE.search(_section_heading_for(text, position)))
+
+
 def _derived_percentage_point_values(reference: str) -> set[float]:
     percentages = [float(match.group(1)) for match in _PERCENT_RE.finditer(reference)]
     return {
@@ -112,20 +137,22 @@ class DeterministicGroundingEvaluator:
         }
         supported_times = {_normalize_time(item.group()) for item in _TIME_RE.finditer(reference)}
         supported_measurements = {
-            _normalize_measurement(item.group()) for item in _MEASUREMENT_RE.finditer(reference)
+            _normalize_measurement(item.group()) for item in _measurement_matches(reference)
         }
         derived_pp = _derived_percentage_point_values(reference)
 
         supported: list[str] = []
         unsupported: list[GroundingFinding] = []
+        proposed: list[GroundingFinding] = []
         seen_unsupported: set[tuple[GroundingFindingKind, str]] = set()
+        seen_proposed: set[tuple[GroundingFindingKind, str]] = set()
 
         for match in _VERSION_RE.finditer(answer):
             normalized = _normalize_version(match.group())
             if normalized in supported_versions:
                 supported.append(normalized)
             else:
-                self._append_unsupported(
+                self._append_finding(
                     unsupported,
                     seen_unsupported,
                     kind=GroundingFindingKind.UNSUPPORTED_VERSION,
@@ -138,29 +165,49 @@ class DeterministicGroundingEvaluator:
             normalized = _normalize_time(match.group())
             if normalized in supported_times:
                 supported.append(normalized)
-            else:
-                self._append_unsupported(
-                    unsupported,
-                    seen_unsupported,
-                    kind=GroundingFindingKind.UNSUPPORTED_TIME,
+                continue
+            if _is_proposed_context(answer, match.start()):
+                self._append_finding(
+                    proposed,
+                    seen_proposed,
+                    kind=GroundingFindingKind.PROPOSED_PARAMETER,
                     normalized=normalized,
                     value=match.group(),
                     context=_context_for(answer, match.start(), match.end()),
                 )
+                continue
+            self._append_finding(
+                unsupported,
+                seen_unsupported,
+                kind=GroundingFindingKind.UNSUPPORTED_TIME,
+                normalized=normalized,
+                value=match.group(),
+                context=_context_for(answer, match.start(), match.end()),
+            )
 
-        for match in _MEASUREMENT_RE.finditer(answer):
+        for match in _measurement_matches(answer):
             normalized = _normalize_measurement(match.group())
             if normalized in supported_measurements or _is_supported_pp(normalized, derived_pp):
                 supported.append(normalized)
-            else:
-                self._append_unsupported(
-                    unsupported,
-                    seen_unsupported,
-                    kind=GroundingFindingKind.UNSUPPORTED_MEASUREMENT,
+                continue
+            if _is_proposed_context(answer, match.start()):
+                self._append_finding(
+                    proposed,
+                    seen_proposed,
+                    kind=GroundingFindingKind.PROPOSED_PARAMETER,
                     normalized=normalized,
                     value=match.group(),
                     context=_context_for(answer, match.start(), match.end()),
                 )
+                continue
+            self._append_finding(
+                unsupported,
+                seen_unsupported,
+                kind=GroundingFindingKind.UNSUPPORTED_MEASUREMENT,
+                normalized=normalized,
+                value=match.group(),
+                context=_context_for(answer, match.start(), match.end()),
+            )
 
         causality = self._causality_findings(answer)
         return GroundingReport(
@@ -168,10 +215,11 @@ class DeterministicGroundingEvaluator:
             unsupported_specifics=tuple(unsupported),
             causality_overclaims=causality,
             uncertainty_preserved=bool(_UNCERTAINTY_RE.search(answer)),
+            proposed_specifics=tuple(proposed),
         )
 
     @staticmethod
-    def _append_unsupported(
+    def _append_finding(
         findings: list[GroundingFinding],
         seen: set[tuple[GroundingFindingKind, str]],
         *,
@@ -190,12 +238,18 @@ class DeterministicGroundingEvaluator:
     def _causality_findings(answer: str) -> tuple[GroundingFinding, ...]:
         findings: list[GroundingFinding] = []
         seen_contexts: set[str] = set()
+        active_heading = ""
         for raw_line in answer.splitlines():
             line = " ".join(raw_line.split())
             if not line:
                 continue
+            heading = _HEADING_RE.match(raw_line)
+            if heading is not None:
+                active_heading = heading.group("title")
+                continue
             causal = _CAUSALITY_RE.search(line)
-            if causal is None or _UNCERTAINTY_RE.search(line):
+            section_is_qualified = bool(_UNCERTAINTY_RE.search(active_heading))
+            if causal is None or _UNCERTAINTY_RE.search(line) or section_is_qualified:
                 continue
             if line in seen_contexts:
                 continue
