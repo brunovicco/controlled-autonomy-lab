@@ -138,15 +138,13 @@ def _is_direct_textual_support(
 
 def _is_proposed(candidate: _ClaimCandidate) -> bool:
     return bool(
-        _PROPOSAL_HEADING_RE.search(candidate.heading)
-        or _IMPERATIVE_RE.match(candidate.text)
+        _PROPOSAL_HEADING_RE.search(candidate.heading) or _IMPERATIVE_RE.match(candidate.text)
     )
 
 
 def _is_inference(candidate: _ClaimCandidate) -> bool:
     return bool(
-        _INFERENCE_RE.search(candidate.text)
-        or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
+        _INFERENCE_RE.search(candidate.text) or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
     )
 
 
@@ -213,10 +211,7 @@ class DeterministicClaimEvaluatorV2:
             return ClaimEvaluation(
                 claim=candidate.text,
                 kind=ClaimKind.UNSUPPORTED_CLAIM,
-                rationale=(
-                    "grounding-v1-causality-overclaim:"
-                    f"{grounding.causality_overclaim_count}"
-                ),
+                rationale=f"grounding-v1-causality-overclaim:{grounding.causality_overclaim_count}",
                 evidence_sources=sources,
             )
 
