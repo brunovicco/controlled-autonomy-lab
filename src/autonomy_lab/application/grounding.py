@@ -2,6 +2,7 @@
 
 import re
 from collections.abc import Iterable, Iterator
+from decimal import Decimal, InvalidOperation
 
 from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 from autonomy_lab.domain.grounding import (
@@ -22,6 +23,7 @@ _MEASUREMENT_RE = re.compile(
 )
 _PERCENT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(?P<title>.+?)\s*$", re.MULTILINE)
+_BOLD_HEADING_RE = re.compile(r"^\s*\*\*(?P<title>.+?)\*\*\s*:?[ \t]*$")
 _PROPOSAL_HEADING_RE = re.compile(
     r"\b(?:recommend\w*|next[- ]?steps?|actions?|plan|checks?|mitigation|remediation)\b",
     re.IGNORECASE,
@@ -53,6 +55,12 @@ def _normalize_time(value: str) -> str:
     return f"{int(hour):02d}:{minute}"
 
 
+def _decimal_text(value: Decimal) -> str:
+    if value == value.to_integral_value():
+        return str(int(value))
+    return format(value.normalize(), "f")
+
+
 def _normalize_measurement(value: str) -> str:
     normalized = value.lower().replace("\u202f", " ").replace("\xa0", " ")
     normalized = normalized.replace("\u2013", "-").replace("\u2014", "-")
@@ -61,7 +69,17 @@ def _normalize_measurement(value: str) -> str:
     normalized = re.sub(r"(?:secs?|seconds?)$", "s", normalized)
     normalized = re.sub(r"(?:mins?|minutes?)$", "min", normalized)
     normalized = re.sub(r"(?:hrs?|hours?)$", "h", normalized)
-    return normalized
+
+    scalar_time = re.fullmatch(r"(?P<number>\d+(?:\.\d+)?)(?P<unit>ms|s)", normalized)
+    if scalar_time is None:
+        return normalized
+    try:
+        numeric = Decimal(scalar_time.group("number"))
+    except InvalidOperation:
+        return normalized
+    if scalar_time.group("unit") == "s":
+        numeric *= Decimal(1000)
+    return f"{_decimal_text(numeric)}ms"
 
 
 def _context_for(text: str, start: int, end: int) -> str:
@@ -88,10 +106,26 @@ def _measurement_matches(text: str) -> Iterator[re.Match[str]]:
         yield match
 
 
+def _heading_title(raw_line: str) -> str | None:
+    markdown = _HEADING_RE.match(raw_line)
+    if markdown is not None:
+        return markdown.group("title")
+    bold = _BOLD_HEADING_RE.match(raw_line)
+    if bold is not None:
+        return bold.group("title")
+    return None
+
+
 def _section_heading_for(text: str, position: int) -> str:
     heading = ""
-    for match in _HEADING_RE.finditer(text, 0, position):
-        heading = match.group("title")
+    offset = 0
+    for raw_line in text[:position].splitlines(keepends=True):
+        title = _heading_title(raw_line.rstrip("\r\n"))
+        if title is not None:
+            heading = title
+        offset += len(raw_line)
+        if offset >= position:
+            break
     return heading
 
 
@@ -243,9 +277,9 @@ class DeterministicGroundingEvaluator:
             line = " ".join(raw_line.split())
             if not line:
                 continue
-            heading = _HEADING_RE.match(raw_line)
+            heading = _heading_title(raw_line)
             if heading is not None:
-                active_heading = heading.group("title")
+                active_heading = heading
                 continue
             causal = _CAUSALITY_RE.search(line)
             section_is_qualified = bool(_UNCERTAINTY_RE.search(active_heading))
