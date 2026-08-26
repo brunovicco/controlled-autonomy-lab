@@ -1,6 +1,6 @@
 """Deterministic in-memory incident evidence for the demonstration."""
 
-from harness_example.domain.autonomy import EvidenceItem, Incident
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 
 
 class IncidentNotFoundError(KeyError):

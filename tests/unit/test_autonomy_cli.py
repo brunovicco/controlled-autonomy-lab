@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-import harness_example.entrypoints.autonomy_cli as cli
-from harness_example.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
+import autonomy_lab.cli as cli
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
 
 
 class StaticRunner:

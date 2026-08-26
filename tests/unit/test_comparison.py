@@ -1,5 +1,5 @@
-from harness_example.application.comparison import repeat_pattern, summarize_repetitions
-from harness_example.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
+from autonomy_lab.application.comparison import repeat_pattern, summarize_repetitions
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
 
 
 class SequenceRunner:

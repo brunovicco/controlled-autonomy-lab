@@ -1,8 +1,8 @@
 import pytest
 
-from harness_example.adapters.anthropic import AnthropicMessagesClient
-from harness_example.adapters.openai_compatible import OpenAICompatibleChatClient
-from harness_example.adapters.providers import client_from_env
+from autonomy_lab.adapters.anthropic import AnthropicMessagesClient
+from autonomy_lab.adapters.openai_compatible import OpenAICompatibleChatClient
+from autonomy_lab.adapters.providers import client_from_env
 
 
 def test_anthropic_is_preserved_as_default_provider() -> None:

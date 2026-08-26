@@ -5,24 +5,24 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from harness_example.adapters.incidents import InMemoryIncidentStore
-from harness_example.adapters.providers import client_from_env
-from harness_example.adapters.run_log import MetadataRunRecorder
-from harness_example.application.comparison import (
+from autonomy_lab.adapters.incidents import InMemoryIncidentStore
+from autonomy_lab.adapters.providers import client_from_env
+from autonomy_lab.adapters.run_log import MetadataRunRecorder
+from autonomy_lab.application.comparison import (
     PatternRunner,
     repeat_pattern,
     summarize_repetitions,
 )
-from harness_example.application.model_ports import ModelClient
-from harness_example.application.patterns.agent import BoundedIncidentAgent
-from harness_example.application.patterns.augmented import AugmentedIncidentAnalysis
-from harness_example.application.patterns.chaining import ChainedIncidentAnalysis
-from harness_example.application.patterns.evaluator_optimizer import (
+from autonomy_lab.application.model_ports import ModelClient
+from autonomy_lab.application.patterns.agent import BoundedIncidentAgent
+from autonomy_lab.application.patterns.augmented import AugmentedIncidentAnalysis
+from autonomy_lab.application.patterns.chaining import ChainedIncidentAnalysis
+from autonomy_lab.application.patterns.evaluator_optimizer import (
     EvaluatorOptimizerIncidentAnalysis,
 )
-from harness_example.application.patterns.parallel import ParallelIncidentAnalysis
-from harness_example.application.patterns.routing import RoutedIncidentAnalysis
-from harness_example.domain.autonomy import AutonomyPattern, PatternRun
+from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
+from autonomy_lab.application.patterns.routing import RoutedIncidentAnalysis
+from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 
 
 def _build_runner(

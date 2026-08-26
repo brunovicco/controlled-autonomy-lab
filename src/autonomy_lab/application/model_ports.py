@@ -2,8 +2,8 @@
 
 from typing import Protocol
 
-from harness_example.application.agent_ports import AgentModel
-from harness_example.application.ports import TextModel
+from autonomy_lab.application.agent_ports import AgentModel
+from autonomy_lab.application.ports import TextModel
 
 
 class ModelClient(TextModel, AgentModel, Protocol):

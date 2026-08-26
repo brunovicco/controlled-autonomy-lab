@@ -1,12 +1,12 @@
 import pytest
 
-from harness_example.adapters.incidents import InMemoryIncidentStore
-from harness_example.application.patterns.evaluator_optimizer import (
+from autonomy_lab.adapters.incidents import InMemoryIncidentStore
+from autonomy_lab.application.patterns.evaluator_optimizer import (
     EvaluationLimitError,
     EvaluatorOptimizerIncidentAnalysis,
     InvalidEvaluationError,
 )
-from harness_example.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelTurn, ModelUsage
 
 
 class SequentialModel:

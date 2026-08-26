@@ -2,10 +2,10 @@
 
 from time import perf_counter
 
-from harness_example.application.agent_ports import AgentModel
-from harness_example.application.ports import IncidentStore
-from harness_example.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
-from harness_example.domain.autonomy import AutonomyPattern, EvidenceItem, ModelUsage, PatternRun
+from autonomy_lab.application.agent_ports import AgentModel
+from autonomy_lab.application.ports import IncidentStore
+from autonomy_lab.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.domain.autonomy import AutonomyPattern, EvidenceItem, ModelUsage, PatternRun
 
 _TOOL_NAMES = (
     "get_service_metrics",

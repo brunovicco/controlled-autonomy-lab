@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from harness_example.adapters.run_log import MetadataRunRecorder
-from harness_example.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
+from autonomy_lab.adapters.run_log import MetadataRunRecorder
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
 
 
 def test_run_log_records_metrics_but_not_answer_content(tmp_path: Path) -> None:

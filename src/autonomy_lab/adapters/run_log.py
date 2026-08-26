@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from harness_example.domain.autonomy import PatternRun
+from autonomy_lab.domain.autonomy import PatternRun
 
 
 class MetadataRunRecorder:

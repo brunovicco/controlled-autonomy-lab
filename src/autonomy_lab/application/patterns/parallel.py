@@ -3,8 +3,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
-from harness_example.application.ports import IncidentStore, TextModel
-from harness_example.domain.autonomy import (
+from autonomy_lab.application.ports import IncidentStore, TextModel
+from autonomy_lab.domain.autonomy import (
     AutonomyPattern,
     EvidenceItem,
     Incident,

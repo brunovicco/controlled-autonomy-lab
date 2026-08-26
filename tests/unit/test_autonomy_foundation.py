@@ -1,5 +1,5 @@
-from harness_example.adapters.incidents import IncidentNotFoundError, InMemoryIncidentStore
-from harness_example.domain.autonomy import AutonomyPattern, ModelUsage
+from autonomy_lab.adapters.incidents import IncidentNotFoundError, InMemoryIncidentStore
+from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage
 
 
 def test_incident_fixture_is_deterministic() -> None:

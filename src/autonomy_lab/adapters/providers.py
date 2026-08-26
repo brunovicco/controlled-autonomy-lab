@@ -3,9 +3,9 @@
 import os
 from collections.abc import Mapping
 
-from harness_example.adapters.anthropic import AnthropicMessagesClient
-from harness_example.adapters.openai_compatible import OpenAICompatibleChatClient
-from harness_example.application.model_ports import ModelClient
+from autonomy_lab.adapters.anthropic import AnthropicMessagesClient
+from autonomy_lab.adapters.openai_compatible import OpenAICompatibleChatClient
+from autonomy_lab.application.model_ports import ModelClient
 
 _SUPPORTED = ("anthropic", "openai", "groq", "openrouter", "custom")
 

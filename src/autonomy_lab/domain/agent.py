@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal
 
-from harness_example.domain.autonomy import ModelUsage
+from autonomy_lab.domain.autonomy import ModelUsage
 
 
 @dataclass(frozen=True, slots=True)

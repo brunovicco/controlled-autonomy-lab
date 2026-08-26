@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from harness_example.domain.autonomy import AutonomyPattern, PatternRun
+from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 
 
 class PatternRunner(Protocol):

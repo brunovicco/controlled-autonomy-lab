@@ -5,8 +5,8 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from harness_example.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
-from harness_example.domain.autonomy import ModelTurn, ModelUsage
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
+from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
 
 _API_HOST = "api.anthropic.com"
 _API_PATH = "/v1/messages"

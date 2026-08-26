@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from harness_example.domain.agent import AgentMessage, AgentTurn, ToolSpec
+from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolSpec
 
 
 class AgentModel(Protocol):
