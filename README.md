@@ -203,7 +203,7 @@ uv run autonomy-lab benchmark \
   --output results/groq-gpt-oss-20b-900
 ```
 
-The `30s` interval above is a conservative starting point for the currently documented Groq Free Plan limits of `openai/gpt-oss-20b`; provider/account limits can differ and change over time. In live smoke calibration on 2026-08-26 with `LLM_MAX_TOKENS=900`, a `2s` interval completed `2/6` patterns while `30s` completed `6/6` with exit code `0`. This is a dated workload-specific observation, not a permanent provider guarantee.
+The `30s` interval above is a conservative starting point for the currently documented Groq Free Plan limits of `openai/gpt-oss-20b`; provider/account limits can differ and change over time. In live smoke calibration on 2026-08-26 with `LLM_MAX_TOKENS=900`, a `2s` interval completed `2/6` patterns while `30s` completed `6/6` with exit code `0`. Those smoke runs are pacing calibration with `n=1`, not architecture-quality conclusions.
 
 Each cycle contains all six patterns, but the starting pattern rotates deterministically on later cycles. This reduces fixed-order exposure to provider quota drift without introducing random ordering.
 
