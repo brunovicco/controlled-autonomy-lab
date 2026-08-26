@@ -15,6 +15,7 @@ from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.adapters.providers import client_from_env
 from autonomy_lab.adapters.run_log import MetadataRunRecorder
 from autonomy_lab.application.benchmark import run_benchmark, summarize_benchmark
+from autonomy_lab.application.claim_evaluation import DeterministicClaimEvaluatorV2
 from autonomy_lab.application.comparison import (
     PatternRunner,
     repeat_pattern,
@@ -33,6 +34,7 @@ from autonomy_lab.application.patterns.parallel import ParallelIncidentAnalysis
 from autonomy_lab.application.patterns.routing import RoutedIncidentAnalysis
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkStatus
+from autonomy_lab.domain.claim_evaluation import ClaimEvaluationReport
 from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport
 
 
@@ -83,7 +85,31 @@ def _grounding_payload(report: GroundingReport) -> dict[str, object]:
     }
 
 
-def _run_payload(run: PatternRun, grounding: GroundingReport | None = None) -> dict[str, object]:
+def _claim_evaluation_payload(report: ClaimEvaluationReport) -> dict[str, object]:
+    return {
+        "claims": [
+            {
+                "claim": claim.claim,
+                "kind": claim.kind.value,
+                "rationale": claim.rationale,
+                "evidence_sources": list(claim.evidence_sources),
+            }
+            for claim in report.claims
+        ],
+        "supported_facts": report.supported_fact_count,
+        "supported_inferences": report.supported_inference_count,
+        "proposed_actions": report.proposed_action_count,
+        "unsupported_claims": report.unsupported_claim_count,
+        "evaluable_claims": report.evaluable_claim_count,
+        "support_ratio": round(report.support_ratio, 4),
+    }
+
+
+def _run_payload(
+    run: PatternRun,
+    grounding: GroundingReport | None = None,
+    claim_evaluation: ClaimEvaluationReport | None = None,
+) -> dict[str, object]:
     payload: dict[str, object] = {
         "pattern": run.pattern.value,
         "incident_id": run.incident_id,
@@ -97,6 +123,8 @@ def _run_payload(run: PatternRun, grounding: GroundingReport | None = None) -> d
     }
     if grounding is not None:
         payload["grounding"] = _grounding_payload(grounding)
+    if claim_evaluation is not None:
+        payload["claim_evaluation"] = _claim_evaluation_payload(claim_evaluation)
     return payload
 
 
@@ -160,14 +188,28 @@ def _print_grounding(report: GroundingReport) -> None:
         print(f"- {finding.kind.value}: {finding.value!r} :: {finding.context}")
 
 
+def _print_claim_evaluation(report: ClaimEvaluationReport) -> None:
+    print("\nclaim evaluation v2:\n")
+    print(f"supported facts:       {report.supported_fact_count}")
+    print(f"supported inferences:  {report.supported_inference_count}")
+    print(f"proposed actions:      {report.proposed_action_count}")
+    print(f"unsupported claims:    {report.unsupported_claim_count}")
+    print(f"evaluable claims:      {report.evaluable_claim_count}")
+    print(f"claim support:         {report.support_ratio:.1%}")
+    for claim in report.claims:
+        sources = ",".join(claim.evidence_sources) or "-"
+        print(f"- {claim.kind.value}: {claim.claim!r} [{claim.rationale}; sources={sources}]")
+
+
 def _print_run(
     run: PatternRun,
     *,
     as_json: bool,
     grounding: GroundingReport | None = None,
+    claim_evaluation: ClaimEvaluationReport | None = None,
 ) -> None:
     if as_json:
-        print(json.dumps(_run_payload(run, grounding), indent=2))
+        print(json.dumps(_run_payload(run, grounding, claim_evaluation), indent=2))
         return
     print(f"pattern:       {run.pattern.value}")
     print(f"model calls:   {run.model_calls}")
@@ -180,6 +222,8 @@ def _print_run(
     print(run.answer)
     if grounding is not None:
         _print_grounding(grounding)
+    if claim_evaluation is not None:
+        _print_claim_evaluation(claim_evaluation)
 
 
 def _record_if_requested(run: PatternRun, trace_file: str | None) -> None:
@@ -193,6 +237,17 @@ def _grounding_for_run(
     store: InMemoryIncidentStore,
     evaluator: DeterministicGroundingEvaluator,
 ) -> GroundingReport:
+    incident = store.get_incident(run.incident_id)
+    evidence = store.get_evidence(incident)
+    return evaluator.evaluate(answer=run.answer, incident=incident, evidence=evidence)
+
+
+def _claim_evaluation_for_run(
+    run: PatternRun,
+    *,
+    store: InMemoryIncidentStore,
+    evaluator: DeterministicClaimEvaluatorV2,
+) -> ClaimEvaluationReport:
     incident = store.get_incident(run.incident_id)
     evidence = store.get_evidence(incident)
     return evaluator.evaluate(answer=run.answer, incident=incident, evidence=evidence)
@@ -234,6 +289,11 @@ def _parser() -> argparse.ArgumentParser:
         "--grounding",
         action="store_true",
         help="evaluate exact specifics and causal language against the incident fixture",
+    )
+    run_parser.add_argument(
+        "--claims",
+        action="store_true",
+        help="classify answer claims with the conservative deterministic v2 baseline",
     )
 
     compare_parser = subparsers.add_parser("compare", help="execute every pattern once")
@@ -371,13 +431,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         _record_if_requested(run, args.trace_file)
         grounding = None
+        claim_evaluation = None
         if args.grounding:
             grounding = _grounding_for_run(
                 run,
                 store=store,
                 evaluator=DeterministicGroundingEvaluator(),
             )
-        _print_run(run, as_json=args.json, grounding=grounding)
+        if args.claims:
+            claim_evaluation = _claim_evaluation_for_run(
+                run,
+                store=store,
+                evaluator=DeterministicClaimEvaluatorV2(),
+            )
+        _print_run(
+            run,
+            as_json=args.json,
+            grounding=grounding,
+            claim_evaluation=claim_evaluation,
+        )
         return 0
 
     if args.command == "compare":

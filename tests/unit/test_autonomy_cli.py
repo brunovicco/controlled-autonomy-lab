@@ -81,6 +81,7 @@ def test_run_command_supports_json_and_metadata_trace(
     assert payload["pattern"] == "augmented"
     assert payload["answer"] == "grounded answer"
     assert "grounding" not in payload
+    assert "claim_evaluation" not in payload
     trace = json.loads(trace_file.read_text(encoding="utf-8"))
     assert "answer" not in trace
 
@@ -101,13 +102,32 @@ def test_run_command_can_emit_grounding_report_in_json(
     assert grounding["specific_grounding_ratio"] == 1.0
 
 
+def test_run_command_can_emit_claim_evaluation_in_json(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_live_dependencies(monkeypatch)
+
+    assert cli.main(["run", "augmented", "--claims", "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    claims = payload["claim_evaluation"]
+    assert claims["supported_facts"] == 0
+    assert claims["supported_inferences"] == 0
+    assert claims["proposed_actions"] == 0
+    assert claims["unsupported_claims"] == 1
+    assert claims["evaluable_claims"] == 1
+    assert claims["support_ratio"] == 0.0
+    assert claims["claims"][0]["kind"] == "unsupported-claim"
+
+
 def test_run_command_supports_human_output(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_live_dependencies(monkeypatch)
 
-    assert cli.main(["run", "agent", "--grounding"]) == 0
+    assert cli.main(["run", "agent", "--grounding", "--claims"]) == 0
 
     output = capsys.readouterr().out
     assert "pattern:       agent" in output
@@ -116,6 +136,8 @@ def test_run_command_supports_human_output(
     assert "grounding:" in output
     assert "unsupported specifics: 0" in output
     assert "proposed parameters:   0" in output
+    assert "claim evaluation v2:" in output
+    assert "unsupported claims:    1" in output
 
 
 def test_compare_runs_every_pattern_with_grounding_columns(

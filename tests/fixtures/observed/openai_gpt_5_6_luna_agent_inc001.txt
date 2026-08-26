@@ -1,0 +1,19 @@
+## Assessment — INC-001
+
+**Observed facts**
+- `checkout-api` 5xx rose from **0.2% at 13:55** to **4.1% at 14:05**, then **8.7% at 14:10**.
+- p95 latency increased from **310 ms** to **2,840 ms** over the same period.
+- `checkout-api v2.18.4` was deployed at **13:58** with a **new payment-provider timeout configuration**.
+- Payment-provider latency increased shortly after **14:00**; no confirmed provider outage is reported.
+- A prior incident had similar symptoms from an upstream timeout mismatch, but that is historical context—not proof of the current cause.
+
+**Likely contributing factor**
+The timing and symptom pattern are consistent with an interaction between the new timeout configuration and increased payment-provider latency. This is a **leading hypothesis, not confirmed causality**. The elevated latency could be causing checkout requests to time out or fail, producing the 5xx increase.
+
+**Recommended reversible next steps**
+1. Compare the payment timeout settings in **v2.18.4** with the previous version and validate their units and expected behavior.
+2. Check checkout-api error logs/metrics for timeout-related failures and correlate them with payment-provider calls.
+3. If timeout errors are confirmed, temporarily restore the prior known-good timeout behavior or otherwise disable the new timeout configuration through the normal reversible change process.
+4. Continue monitoring 5xx rate, p95 latency, and payment-provider latency after any mitigation.
+
+No confirmed root cause or evidence of a general payment-provider outage is currently available.
