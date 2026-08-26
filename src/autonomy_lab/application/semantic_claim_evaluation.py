@@ -40,9 +40,7 @@ class SemanticClaimEvaluationError(ValueError):
 
 
 def _is_hard_failure(claim: ClaimEvaluation) -> bool:
-    return claim.kind is ClaimKind.UNSUPPORTED_CLAIM and claim.rationale.startswith(
-        "grounding-v1-"
-    )
+    return claim.kind is ClaimKind.UNSUPPORTED_CLAIM and claim.rationale.startswith("grounding-v1-")
 
 
 def _is_semantic_candidate(claim: ClaimEvaluation) -> bool:
@@ -52,10 +50,7 @@ def _is_semantic_candidate(claim: ClaimEvaluation) -> bool:
 def _prompt_for(claim: str, evidence: tuple[EvidenceItem, ...]) -> str:
     payload = {
         "claim": claim,
-        "evidence": [
-            {"source": item.source, "summary": item.summary}
-            for item in evidence
-        ],
+        "evidence": [{"source": item.source, "summary": item.summary} for item in evidence],
     }
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
