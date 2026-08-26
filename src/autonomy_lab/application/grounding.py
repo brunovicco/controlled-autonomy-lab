@@ -40,8 +40,9 @@ _CAUSALITY_RE = re.compile(
 )
 _UNCERTAINTY_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
-    r"suggests?\b|if\b|alternatively|correlation|not proven|cannot|can't|uncertain\w*|"
-    r"unknown|assuming|would confirm|would falsify)\b",
+    r"suggests?\b|if\b|alternatively|correlation|not proven|no confirmed|not confirmed|"
+    r"unconfirmed|no evidence|cannot|can't|uncertain\w*|unknown|assuming|would confirm|"
+    r"would falsify)\b",
     re.IGNORECASE,
 )
 _CAUSAL_TAIL_STOPWORDS = {
