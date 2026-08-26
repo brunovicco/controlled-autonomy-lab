@@ -1,3 +1,4 @@
+import http.client
 import json
 from typing import Any
 
@@ -62,7 +63,7 @@ def _install_connection(
         assert timeout == 30.0
         return connection
 
-    monkeypatch.setattr(compatible.http.client, "HTTPSConnection", factory)
+    monkeypatch.setattr(http.client, "HTTPSConnection", factory)
     return connection
 
 
@@ -221,7 +222,11 @@ def test_provider_rejects_invalid_tool_argument_json(monkeypatch: pytest.MonkeyP
 
 def test_client_configuration_fails_closed() -> None:
     with pytest.raises(ValueError, match="api_key"):
-        compatible.OpenAICompatibleChatClient(api_key="", base_url="https://x.test/v1", model="m")
+        compatible.OpenAICompatibleChatClient(
+            api_key="",
+            base_url="https://x.test/v1",
+            model="m",
+        )
     with pytest.raises(ValueError, match="plain HTTPS"):
         compatible.OpenAICompatibleChatClient(
             api_key="key",
