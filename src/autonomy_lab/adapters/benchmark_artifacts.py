@@ -175,13 +175,9 @@ def _summary_csv(
                 "p50_latency_ms": _csv_number(summary.p50_latency_ms),
                 "mean_unsupported": _csv_number(summary.mean_unsupported),
                 "mean_proposed": _csv_number(summary.mean_proposed),
-                "mean_causality_overclaims": _csv_number(
-                    summary.mean_causality_overclaims
-                ),
+                "mean_causality_overclaims": _csv_number(summary.mean_causality_overclaims),
                 "mean_grounding_ratio": _csv_number(summary.mean_grounding_ratio),
-                "uncertainty_preservation_rate": _csv_number(
-                    summary.uncertainty_preservation_rate
-                ),
+                "uncertainty_preservation_rate": _csv_number(summary.uncertainty_preservation_rate),
                 "unique_trajectories": summary.unique_trajectories,
             }
         )

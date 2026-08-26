@@ -158,9 +158,7 @@ def summarize_benchmark(
     for pattern in patterns:
         attempted = [record for record in records if record.pattern is pattern]
         completed = [record for record in attempted if record.status is BenchmarkStatus.OK]
-        rate_limited = sum(
-            record.status is BenchmarkStatus.RATE_LIMITED for record in attempted
-        )
+        rate_limited = sum(record.status is BenchmarkStatus.RATE_LIMITED for record in attempted)
         provider_errors = sum(
             record.status is BenchmarkStatus.PROVIDER_ERROR for record in attempted
         )

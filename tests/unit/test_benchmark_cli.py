@@ -115,9 +115,7 @@ def test_benchmark_command_persists_partial_results_and_returns_two(
     _patch_benchmark_dependencies(monkeypatch, rate_limit_pattern=AutonomyPattern.CHAINING)
     output = tmp_path / "benchmark"
 
-    exit_code = cli.main(
-        ["benchmark", "--runs", "1", "--output", str(output)]
-    )
+    exit_code = cli.main(["benchmark", "--runs", "1", "--output", str(output)])
 
     assert exit_code == 2
     assert "benchmark: partial" in capsys.readouterr().out
