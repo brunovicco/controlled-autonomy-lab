@@ -16,8 +16,10 @@ The first version intentionally favors checks that are explainable and reproduci
 - timestamps such as `14:10`;
 - measurements and durations such as `2840ms`, `2.84 s`, `8.7%`, `3 s`, or `30-60 min`;
 - exact seconds-to-milliseconds equivalence for scalar time measurements;
+- explicitly marked rounded approximations when the fixture value rounds exactly to the precision shown;
 - percentage-point deltas that can be derived exactly from fixture percentages;
 - strong causal language without local or section-level uncertainty qualifiers;
+- causal statements about historical incidents only when the same historical incident and causal detail are supported by fixture evidence;
 - whether the answer preserves explicit uncertainty language;
 - whether an otherwise unsupported time/measurement appears under a recommendation/action section rather than as an observed fact.
 
@@ -31,7 +33,7 @@ Timestamp spans are excluded from measurement parsing. This prevents text such a
 | `unsupported-time` | a timestamp is presented outside a proposal section but does not exist in the fixture |
 | `unsupported-measurement` | a factual measurement, percentage, or duration is neither present nor explicitly derivable from the fixture |
 | `proposed-parameter` | an otherwise unsupported timestamp/measurement occurs under a recommendation/action heading and is tracked separately from factual grounding |
-| `causality-overclaim` | strong causal language appears without a local or section-level uncertainty qualifier |
+| `causality-overclaim` | strong causal language appears without a local or section-level uncertainty qualifier and without supporting historical evidence |
 
 Examples:
 
@@ -41,6 +43,8 @@ v2.18.3       -> unsupported-version
 2840ms        -> supported
 2 840 ms      -> supported after Unicode normalization
 2.84 s        -> supported because it is exactly 2840 ms
+~2.8 s        -> supported because 2.84 s rounds to 2.8 s and approximation is explicit
+2.8 s         -> unsupported-measurement when presented as an exact observation
 1250ms        -> unsupported-measurement
 "p95 was 1 s" -> unsupported-measurement
 "alert if p95 > 1 s" under Recommended next steps -> proposed-parameter
@@ -48,6 +52,8 @@ v2.18.3       -> unsupported-version
 ```
 
 The unit normalization is deliberately narrow in v1: scalar seconds are canonicalized to milliseconds so equivalent representations can be compared exactly. It is not a general unit-conversion engine.
+
+Approximation is also deliberately narrow. Values are accepted as rounded representations only when the answer explicitly marks them with a token such as `~`, `about`, `around`, `roughly`, `approx.` or `approximately`, and the exact fixture value rounds to the numeric precision presented by the answer. No arbitrary percentage tolerance is used.
 
 Concrete semantic versions remain checkable even inside recommendations. For example, `roll back to v2.18.3` is still reported when the fixture never identifies `v2.18.3` as an available previous release.
 
@@ -97,6 +103,14 @@ Hypothesis: the deployment may have caused the increase, but the timing is only 
 ```
 
 preserves uncertainty.
+
+Historical evidence is handled separately. The fixture for `INC-001` states that `INC-884` had similar symptoms caused by an upstream timeout mismatch. Therefore this answer is supported historical context rather than a current-incident causal overclaim:
+
+```text
+Incident INC-884 had a similar pattern; root cause was an upstream timeout mismatch.
+```
+
+The exemption is not based on the historical incident identifier alone. The historical incident must exist in the reference fixture and the causal detail after the causal predicate must be supported by the evidence line for that incident. For example, `INC-884 root cause was database corruption` remains a `causality-overclaim` because that cause is absent from the fixture.
 
 The causal check is intentionally conservative and lexical. It is not a general natural-language inference engine.
 
