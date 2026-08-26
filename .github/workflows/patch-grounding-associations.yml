@@ -1,0 +1,64 @@
+name: patch-grounding-associations
+
+on:
+  push:
+    branches:
+      - feat/grounding-evaluation-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/grounding-evaluation-v1
+      - name: Patch deterministic association checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/autonomy_lab/application/grounding.py")
+          text = path.read_text()
+          original = text
+
+          marker = "\ndef _is_explicit_approximation(text: str, position: int) -> bool:\n"
+          helper = '''\ndef _reference_time_measurement_associations(reference: str) -> set[tuple[str, str]]:\n    """Extract exact timestamp-to-measurement pairs encoded by the fixture."""\n    associations: set[tuple[str, str]] = set()\n    for segment in re.split(r",\\s*|\\.\\s+", reference):\n        if "=" not in segment:\n            continue\n        times = list(_TIME_RE.finditer(segment))\n        measurements = list(_measurement_matches(segment))\n        if len(times) != 1 or len(measurements) != 1:\n            continue\n        associations.add(\n            (\n                _normalize_time(times[0].group()),\n                _normalize_measurement(measurements[0].group()),\n            )\n        )\n    return associations\n\n\n'''
+          if helper not in text:
+              assert marker in text
+              text = text.replace(marker, "\n" + helper + marker.lstrip("\n"), 1)
+
+          marker = "\ndef _word_tokens(text: str) -> set[str]:\n"
+          helper = '''\ndef _markdown_table_association_findings(\n    *,\n    answer: str,\n    supported_measurements: set[str],\n    supported_associations: set[tuple[str, str]],\n) -> tuple[GroundingFinding, ...]:\n    """Flag supported values attached to an unsupported timestamp in Markdown table rows."""\n    findings: list[GroundingFinding] = []\n    seen: set[tuple[str, str]] = set()\n    offset = 0\n    for raw_line in answer.splitlines(keepends=True):\n        line = raw_line.rstrip("\\r\\n")\n        stripped = line.strip()\n        if not (stripped.startswith("|") and stripped.endswith("|")):\n            offset += len(raw_line)\n            continue\n        if _is_proposed_context(answer, offset):\n            offset += len(raw_line)\n            continue\n        cells = [cell.strip() for cell in stripped.strip("|").split("|")]\n        if not cells:\n            offset += len(raw_line)\n            continue\n        row_times = list(_TIME_RE.finditer(cells[0]))\n        if len(row_times) != 1:\n            offset += len(raw_line)\n            continue\n        row_time = _normalize_time(row_times[0].group())\n        for cell in cells[1:]:\n            if _TIME_RE.search(cell):\n                continue\n            for match in _measurement_matches(cell):\n                normalized = _normalize_measurement(match.group())\n                canonical = normalized if normalized in supported_measurements else None\n                if canonical is None:\n                    canonical = _approximate_supported_measurement(\n                        text=cell,\n                        match=match,\n                        supported_measurements=supported_measurements,\n                    )\n                if canonical is None:\n                    continue\n                pair = (row_time, canonical)\n                if pair in supported_associations or pair in seen:\n                    continue\n                seen.add(pair)\n                context = " ".join(line.split())\n                if len(context) > 180:\n                    context = f"{context[:177]}..."\n                findings.append(\n                    GroundingFinding(\n                        kind=GroundingFindingKind.UNSUPPORTED_ASSOCIATION,\n                        value=f"{row_time} -> {canonical}",\n                        context=context,\n                    )\n                )\n        offset += len(raw_line)\n    return tuple(findings)\n\n\n'''
+          if helper not in text:
+              assert marker in text
+              text = text.replace(marker, "\n" + helper + marker.lstrip("\n"), 1)
+
+          old = "        derived_pp = _derived_percentage_point_values(reference)\n"
+          new = old + "        supported_associations = _reference_time_measurement_associations(reference)\n"
+          if new not in text:
+              assert old in text
+              text = text.replace(old, new, 1)
+
+          old = "\n        causality = self._causality_findings(\n"
+          new = '''\n        unsupported.extend(\n            _markdown_table_association_findings(\n                answer=answer,\n                supported_measurements=supported_measurements,\n                supported_associations=supported_associations,\n            )\n        )\n\n        causality = self._causality_findings(\n'''
+          if new not in text:
+              assert old in text
+              text = text.replace(old, new, 1)
+
+          if text != original:
+              path.write_text(text)
+          PY
+
+          if git diff --quiet; then
+            echo "Association patch already applied"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/autonomy_lab/application/grounding.py
+          git commit -m "feat: validate timestamp measurement associations"
+          git push origin HEAD:feat/grounding-evaluation-v1
