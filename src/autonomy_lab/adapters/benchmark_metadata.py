@@ -26,6 +26,8 @@ _MODEL_SETTINGS: dict[str, tuple[str, str]] = {
     "custom": ("OPENAI_COMPAT_MODEL", "unknown"),
 }
 
+_GROQ_GPT_OSS_MODELS = {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}
+
 
 def benchmark_environment_from_env(
     env: Mapping[str, str] | None = None,
@@ -37,18 +39,21 @@ def benchmark_environment_from_env(
     provider = settings.get("LLM_PROVIDER", "anthropic").strip().lower()
     model_key, default_model = _MODEL_SETTINGS.get(provider, ("", "unknown"))
     model = settings.get(model_key, default_model).strip() if model_key else default_model
-    reasoning_effort = settings.get("LLM_REASONING_EFFORT")
-    if reasoning_effort is not None:
-        reasoning_effort = reasoning_effort.strip() or None
 
     return BenchmarkEnvironment(
         provider=provider,
         model=model,
         max_tokens=int(settings.get("LLM_MAX_TOKENS", "1200")),
         timeout_seconds=float(settings.get("LLM_TIMEOUT_SECONDS", "30")),
-        reasoning_effort=reasoning_effort,
+        reasoning_effort=_effective_reasoning_effort(provider=provider, model=model),
         git_commit=_git_commit(settings=settings, repository_root=repository_root or Path.cwd()),
     )
+
+
+def _effective_reasoning_effort(*, provider: str, model: str) -> str | None:
+    if provider == "groq" and model in _GROQ_GPT_OSS_MODELS:
+        return "medium"
+    return None
 
 
 def _git_commit(*, settings: Mapping[str, str], repository_root: Path) -> str:
