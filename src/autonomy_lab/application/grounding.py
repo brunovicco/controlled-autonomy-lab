@@ -110,9 +110,7 @@ class DeterministicGroundingEvaluator:
         supported_versions = {
             _normalize_version(item.group()) for item in _VERSION_RE.finditer(reference)
         }
-        supported_times = {
-            _normalize_time(item.group()) for item in _TIME_RE.finditer(reference)
-        }
+        supported_times = {_normalize_time(item.group()) for item in _TIME_RE.finditer(reference)}
         supported_measurements = {
             _normalize_measurement(item.group()) for item in _MEASUREMENT_RE.finditer(reference)
         }
