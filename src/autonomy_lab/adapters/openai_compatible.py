@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
+from autonomy_lab.adapters.provider_error_detail import safe_provider_error_detail
 from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, AgentTurn, ToolCall, ToolResult, ToolSpec
 from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
@@ -71,12 +72,16 @@ class OpenAICompatibleChatClient:
         choice = self._first_choice(response)
         response_message = self._choice_message(choice)
         text = response_message.get("content")
+        finish_reason = str(choice.get("finish_reason") or "unknown")
         if not isinstance(text, str) or not text.strip():
-            raise ModelProviderError(f"{self._provider_label} response did not contain text")
+            raise ModelProviderError(
+                f"{self._provider_label} response did not contain text "
+                f"(finish_reason={finish_reason})"
+            )
         return ModelTurn(
             text=text.strip(),
             usage=self._extract_usage(response),
-            stop_reason=str(choice.get("finish_reason") or "unknown"),
+            stop_reason=finish_reason,
         )
 
     def next_turn(
@@ -154,7 +159,11 @@ class OpenAICompatibleChatClient:
                 retry_after=response.getheader("retry-after"),
             )
         if response.status < 200 or response.status >= 300:
-            raise ModelProviderError(f"{self._provider_label} returned HTTP {response.status}")
+            detail = safe_provider_error_detail(raw, secret=self._api_key)
+            suffix = f": {detail}" if detail else ""
+            raise ModelProviderError(
+                f"{self._provider_label} returned HTTP {response.status}{suffix}"
+            )
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
