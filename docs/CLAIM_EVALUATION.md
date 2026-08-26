@@ -28,9 +28,10 @@ Classification is deliberately asymmetric:
 2. Run Grounding v1 hard checks for non-proposals.
 3. If Grounding v1 reports an unsupported specific, classify `UNSUPPORTED_CLAIM`.
 4. If Grounding v1 reports a causality overclaim, classify `UNSUPPORTED_CLAIM`.
-5. Recognize a qualified inference only when it has a bounded evidence-source anchor.
-6. Recognize a fact when deterministic fixture support exists.
-7. Otherwise fail closed to `UNSUPPORTED_CLAIM`.
+5. Recognize exact textual fixture support as `SUPPORTED_FACT`, including explicitly negative observed facts such as `No confirmed outage.`.
+6. Recognize a qualified inference only when it has a bounded evidence-source anchor.
+7. Recognize a fact when deterministic exact-specific support exists.
+8. Otherwise fail closed to `UNSUPPORTED_CLAIM`.
 
 This ordering matters. A recommendation such as `Monitor for 15 minutes` may introduce a new parameter legitimately; it should not be treated as an observed 15-minute fact. Conversely, a semantic evaluator added later must not be allowed to erase a deterministic unsupported version, measurement or causality finding.
 
@@ -64,6 +65,8 @@ This evidence anchor is a calibration heuristic, not semantic entailment. It pre
 Grounding v1 treats explicit epistemic negation such as `no confirmed`, `not confirmed`, `unconfirmed`, and `no evidence` as uncertainty signals. Therefore a sentence such as `No confirmed root cause is currently available` is not a causality overclaim merely because it contains the lexical phrase `root cause`.
 
 This is distinct from a strong unqualified causal statement such as `The deployment caused the incident`, which remains a hard Grounding v1 failure.
+
+For claim classification, exact negative evidence still wins before inference classification. `No confirmed outage.` is a fixture-supported fact. A broader conclusion such as `No confirmed root cause ... is currently available`, which is not exact fixture text but is epistemically qualified and evidence-anchored, is classified as `SUPPORTED_INFERENCE`.
 
 ## Support ratio
 
@@ -128,8 +131,9 @@ Only the answer text is retained. The fixture excludes prompts, credentials, lat
 
 The regression currently freezes these deterministic expectations:
 
-- Grounding v1: no unsupported specifics and no causal overclaim for explicit negative causal language;
+- Grounding v1: no unsupported specifics, no causal overclaims, and 100% specific grounding;
 - Claim v2: 4 supported facts, 4 supported inferences, 4 proposed actions, and 1 conservative unsupported paraphrase;
+- 9 evaluable non-action claims, 8 supported, producing a support ratio of `8/9` (about `88.9%`);
 - the historical-incident paraphrase remains unsupported in the deterministic layer by design until a semantic evaluator is calibrated;
 - the free-standing conclusion after the recommendation list is an epistemically qualified inference, not a proposed action.
 
