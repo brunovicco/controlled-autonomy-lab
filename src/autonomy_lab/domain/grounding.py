@@ -5,17 +5,18 @@ from enum import StrEnum
 
 
 class GroundingFindingKind(StrEnum):
-    """Kinds of deterministic grounding violations surfaced by the lab."""
+    """Kinds of deterministic grounding findings surfaced by the lab."""
 
     UNSUPPORTED_MEASUREMENT = "unsupported-measurement"
     UNSUPPORTED_TIME = "unsupported-time"
     UNSUPPORTED_VERSION = "unsupported-version"
+    PROPOSED_PARAMETER = "proposed-parameter"
     CAUSALITY_OVERCLAIM = "causality-overclaim"
 
 
 @dataclass(frozen=True, slots=True)
 class GroundingFinding:
-    """One specific grounding issue found in a model answer."""
+    """One specific grounding finding in a model answer."""
 
     kind: GroundingFindingKind
     value: str
@@ -30,11 +31,17 @@ class GroundingReport:
     unsupported_specifics: tuple[GroundingFinding, ...]
     causality_overclaims: tuple[GroundingFinding, ...]
     uncertainty_preserved: bool
+    proposed_specifics: tuple[GroundingFinding, ...] = ()
 
     @property
     def unsupported_count(self) -> int:
-        """Return the number of unique unsupported specifics."""
+        """Return the number of unique unsupported factual specifics."""
         return len(self.unsupported_specifics)
+
+    @property
+    def proposed_count(self) -> int:
+        """Return the number of ungrounded parameters used only in proposed actions."""
+        return len(self.proposed_specifics)
 
     @property
     def causality_overclaim_count(self) -> int:
@@ -43,7 +50,7 @@ class GroundingReport:
 
     @property
     def specific_grounding_ratio(self) -> float:
-        """Return the share of checked specifics that are grounded in the fixture."""
+        """Return the share of checked factual specifics grounded in the fixture."""
         total = len(self.supported_specifics) + len(self.unsupported_specifics)
         if total == 0:
             return 1.0
