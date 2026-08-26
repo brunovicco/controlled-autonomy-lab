@@ -24,30 +24,27 @@ jobs:
           path = Path("src/autonomy_lab/cli.py")
           text = path.read_text()
 
-          old = "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n"
-          new = (
+          text = text.replace(
+              "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n",
               "from autonomy_lab.adapters.anthropic import ModelProviderError as AnthropicProviderError\n"
-              "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n"
+              "from autonomy_lab.adapters.incidents import InMemoryIncidentStore\n",
+              1,
           )
-          assert old in text
-          text = text.replace(old, new, 1)
-
-          old = "from autonomy_lab.application.model_ports import ModelClient\n"
-          new = (
+          text = text.replace(
+              "from autonomy_lab.application.model_ports import ModelClient\n",
               "from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError\n"
-              "from autonomy_lab.application.model_ports import ModelClient\n"
+              "from autonomy_lab.application.model_ports import ModelClient\n",
+              1,
           )
-          assert old in text
-          text = text.replace(old, new, 1)
-
-          old = "from autonomy_lab.domain.grounding import GroundingReport\n"
-          new = "from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport\n"
-          assert old in text
-          text = text.replace(old, new, 1)
+          text = text.replace(
+              "from autonomy_lab.domain.grounding import GroundingReport\n",
+              "from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport\n",
+              1,
+          )
 
           start = text.index("def _grounding_payload(")
           end = text.index("\n\ndef _run_payload", start)
-          replacement = '''def _findings_payload(
+          payload_helpers = '''def _findings_payload(
               findings: tuple[GroundingFinding, ...],
           ) -> list[dict[str, object]]:
               return [
@@ -70,54 +67,35 @@ jobs:
                   "specific_grounding_ratio": round(report.specific_grounding_ratio, 4),
               }
           '''
-          text = text[:start] + replacement.rstrip() + text[end:]
+          text = text[:start] + payload_helpers.rstrip() + text[end:]
 
-          old = '    print(f"unsupported specifics: {report.unsupported_count}")\n'
-          new = old + '    print(f"proposed parameters:   {report.proposed_count}")\n'
-          assert old in text
-          text = text.replace(old, new, 1)
-
-          old = "    for finding in (*report.unsupported_specifics, *report.causality_overclaims):\n"
-          new = (
+          text = text.replace(
+              '    print(f"unsupported specifics: {report.unsupported_count}")\n',
+              '    print(f"unsupported specifics: {report.unsupported_count}")\n'
+              '    print(f"proposed parameters:   {report.proposed_count}")\n',
+              1,
+          )
+          text = text.replace(
+              "    for finding in (*report.unsupported_specifics, *report.causality_overclaims):\n",
               "    for finding in (\n"
               "        *report.unsupported_specifics,\n"
               "        *report.proposed_specifics,\n"
               "        *report.causality_overclaims,\n"
-              "    ):\n"
+              "    ):\n",
+              1,
           )
-          assert old in text
-          text = text.replace(old, new, 1)
 
-          marker = "\ndef main(argv: Sequence[str] | None = None) -> int:\n"
+          main_marker = "\ndef main(argv: Sequence[str] | None = None) -> int:\n"
           helper = '''
 
           def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
               print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
           '''
-          assert marker in text
-          text = text.replace(marker, helper.rstrip() + marker, 1)
+          text = text.replace(main_marker, helper.rstrip() + main_marker, 1)
 
-          old = '''    if args.command == "compare":
-              evaluator = DeterministicGroundingEvaluator()
-              print(
-                  "pattern | model_calls | tool_calls | input_tokens | output_tokens | latency_ms | "
-                  "unsupported | causality | uncertainty"
-              )
-              print("-" * 122)
-              for pattern in AutonomyPattern:
-                  run = _build_runner(pattern, store=store, model=model).run(args.incident)
-                  _record_if_requested(run, args.trace_file)
-                  grounding = _grounding_for_run(run, store=store, evaluator=evaluator)
-                  uncertainty = "yes" if grounding.uncertainty_preserved else "no"
-                  print(
-                      f"{pattern.value} | {run.model_calls} | {run.tool_calls} | "
-                      f"{run.usage.input_tokens} | {run.usage.output_tokens} | {run.latency_ms:.1f} | "
-                      f"{grounding.unsupported_count} | {grounding.causality_overclaim_count} | "
-                      f"{uncertainty}"
-                  )
-              return 0
-          '''
-          new = '''    if args.command == "compare":
+          compare_start = text.index('    if args.command == "compare":')
+          compare_end = text.index("\n    pattern = AutonomyPattern(args.pattern)", compare_start)
+          compare_block = '''    if args.command == "compare":
               evaluator = DeterministicGroundingEvaluator()
               had_provider_errors = False
               print(
@@ -147,9 +125,7 @@ jobs:
                   )
               return 2 if had_provider_errors else 0
           '''
-          assert old in text
-          text = text.replace(old, new, 1)
-
+          text = text[:compare_start] + compare_block.rstrip() + text[compare_end:]
           path.write_text(text)
           PY
       - name: Commit patch
