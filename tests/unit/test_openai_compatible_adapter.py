@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 import autonomy_lab.adapters.openai_compatible as compatible
-from autonomy_lab.application.model_errors import ModelRateLimitError
+from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
 from autonomy_lab.domain.agent import AgentMessage, ToolCall, ToolResult, ToolSpec
 from autonomy_lab.domain.autonomy import ModelUsage
 
@@ -238,7 +238,7 @@ def test_provider_rejects_invalid_tool_argument_json(monkeypatch: pytest.MonkeyP
         ),
     )
 
-    with pytest.raises(compatible.ModelProviderError, match="arguments JSON"):
+    with pytest.raises(ModelProviderError, match="arguments JSON"):
         _client().next_turn(system="system", messages=(), tools=())
 
 
