@@ -32,7 +32,7 @@ def safe_provider_error_detail(raw: bytes, *, secret: str = "") -> str | None:
     if error_code:
         parts.append(f"code={error_code}")
     if isinstance(message, str) and message.strip():
-        parts.append(f"message={_sanitize_message(message, secret=secret)}")
+        parts.append(f"message={_sanitize_message(message, secret_value=secret)}")
     if not parts:
         return None
     return "; ".join(parts)[:_MAX_DETAIL_CHARS]
@@ -40,15 +40,15 @@ def safe_provider_error_detail(raw: bytes, *, secret: str = "") -> str | None:
 
 def _safe_scalar(value: Any) -> str | None:
     if isinstance(value, str) and value.strip():
-        return _sanitize_message(value, secret="")[:80]
+        return _sanitize_message(value)[:80]
     if isinstance(value, int):
         return str(value)
     return None
 
 
-def _sanitize_message(message: str, *, secret: str) -> str:
+def _sanitize_message(message: str, *, secret_value: str | None = None) -> str:
     compact = " ".join(message.split())
-    if secret:
-        compact = compact.replace(secret, "[REDACTED]")
+    if secret_value:
+        compact = compact.replace(secret_value, "[REDACTED]")
     compact = _SECRET_TOKEN_RE.sub("[REDACTED]", compact)
     return _BEARER_RE.sub("Bearer [REDACTED]", compact)
