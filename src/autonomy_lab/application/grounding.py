@@ -181,6 +181,26 @@ def _is_supported_pp(value: str, derived_pp: set[float]) -> bool:
         return False
 
 
+
+def _reference_time_measurement_associations(reference: str) -> set[tuple[str, str]]:
+    """Extract exact timestamp-to-measurement pairs encoded by the fixture."""
+    associations: set[tuple[str, str]] = set()
+    for segment in re.split(r",\s*|\.\s+", reference):
+        if "=" not in segment:
+            continue
+        times = list(_TIME_RE.finditer(segment))
+        measurements = list(_measurement_matches(segment))
+        if len(times) != 1 or len(measurements) != 1:
+            continue
+        associations.add(
+            (
+                _normalize_time(times[0].group()),
+                _normalize_measurement(measurements[0].group()),
+            )
+        )
+    return associations
+
+
 def _is_explicit_approximation(text: str, position: int) -> bool:
     prefix = text[max(0, position - 24) : position]
     return bool(_APPROXIMATION_PREFIX_RE.search(prefix))
@@ -230,6 +250,67 @@ def _approximate_supported_measurement(
         if reference_value.quantize(quantum) == candidate_value:
             return supported
     return None
+
+
+
+def _markdown_table_association_findings(
+    *,
+    answer: str,
+    supported_measurements: set[str],
+    supported_associations: set[tuple[str, str]],
+) -> tuple[GroundingFinding, ...]:
+    """Flag supported values attached to an unsupported timestamp in Markdown table rows."""
+    findings: list[GroundingFinding] = []
+    seen: set[tuple[str, str]] = set()
+    offset = 0
+    for raw_line in answer.splitlines(keepends=True):
+        line = raw_line.rstrip("\r\n")
+        stripped = line.strip()
+        if not (stripped.startswith("|") and stripped.endswith("|")):
+            offset += len(raw_line)
+            continue
+        if _is_proposed_context(answer, offset):
+            offset += len(raw_line)
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not cells:
+            offset += len(raw_line)
+            continue
+        row_times = list(_TIME_RE.finditer(cells[0]))
+        if len(row_times) != 1:
+            offset += len(raw_line)
+            continue
+        row_time = _normalize_time(row_times[0].group())
+        for cell in cells[1:]:
+            if _TIME_RE.search(cell):
+                continue
+            for match in _measurement_matches(cell):
+                normalized = _normalize_measurement(match.group())
+                canonical = normalized if normalized in supported_measurements else None
+                if canonical is None:
+                    canonical = _approximate_supported_measurement(
+                        text=cell,
+                        match=match,
+                        supported_measurements=supported_measurements,
+                    )
+                if canonical is None:
+                    continue
+                pair = (row_time, canonical)
+                if pair in supported_associations or pair in seen:
+                    continue
+                seen.add(pair)
+                context = " ".join(line.split())
+                if len(context) > 180:
+                    context = f"{context[:177]}..."
+                findings.append(
+                    GroundingFinding(
+                        kind=GroundingFindingKind.UNSUPPORTED_ASSOCIATION,
+                        value=f"{row_time} -> {canonical}",
+                        context=context,
+                    )
+                )
+        offset += len(raw_line)
+    return tuple(findings)
 
 
 def _word_tokens(text: str) -> set[str]:
@@ -286,6 +367,7 @@ class DeterministicGroundingEvaluator:
             _normalize_measurement(item.group()) for item in _measurement_matches(reference)
         }
         derived_pp = _derived_percentage_point_values(reference)
+        supported_associations = _reference_time_measurement_associations(reference)
 
         supported: list[str] = []
         unsupported: list[GroundingFinding] = []
@@ -362,6 +444,14 @@ class DeterministicGroundingEvaluator:
                 value=match.group(),
                 context=_context_for(answer, match.start(), match.end()),
             )
+
+        unsupported.extend(
+            _markdown_table_association_findings(
+                answer=answer,
+                supported_measurements=supported_measurements,
+                supported_associations=supported_associations,
+            )
+        )
 
         causality = self._causality_findings(
             answer,
