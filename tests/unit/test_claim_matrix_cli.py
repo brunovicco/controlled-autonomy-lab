@@ -1,9 +1,14 @@
 import json
 
+from _pytest.capture import CaptureFixture
+from _pytest.monkeypatch import MonkeyPatch
+
 from autonomy_lab import claim_matrix_cli
 
 
-def test_claim_matrix_cli_emits_deterministic_json(capsys) -> None:
+def test_claim_matrix_cli_emits_deterministic_json(
+    capsys: CaptureFixture[str],
+) -> None:
     exit_code = claim_matrix_cli.main(["--json"])
 
     assert exit_code == 0
@@ -17,8 +22,8 @@ def test_claim_matrix_cli_emits_deterministic_json(capsys) -> None:
 
 
 def test_claim_matrix_cli_preserves_baseline_when_judge_config_is_invalid(
-    monkeypatch,
-    capsys,
+    monkeypatch: MonkeyPatch,
+    capsys: CaptureFixture[str],
 ) -> None:
     monkeypatch.setenv("SEMANTIC_LLM_PROVIDER", "groq")
     monkeypatch.delenv("SEMANTIC_GROQ_API_KEY", raising=False)
