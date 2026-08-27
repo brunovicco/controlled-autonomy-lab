@@ -37,7 +37,10 @@ class ClaimMatrixRow:
     expected_kind: ClaimKind
     deterministic_kind: ClaimKind
     deterministic_rationale: str
+    deterministic_evidence_sources: tuple[str, ...]
     semantic_kind: ClaimKind | None
+    semantic_rationale: str | None
+    semantic_evidence_sources: tuple[str, ...]
     final_kind: ClaimKind
     semantic_evaluated: bool
     disagreement: bool
