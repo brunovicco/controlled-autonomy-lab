@@ -119,9 +119,43 @@ Judge failures are post-run analysis failures. The successful generator answer i
 
 A judge failure is not converted into a claim verdict.
 
-## First intended cross-model smoke
+## Cross-model smoke
 
-Use the already-calibrated OpenAI generator with Groq GPT-OSS as the judge:
+The first live cross-model calibration used:
+
+- generator: OpenAI `gpt-5.6-luna`;
+- judge: Groq `openai/gpt-oss-20b`;
+- generator max output tokens: `4000`;
+- judge max output tokens: `600`;
+- `self_judge: false`.
+
+The bounded agent completed successfully with the expected six-step trajectory, five tool calls, and two generator model calls. Grounding v1 reported 100% specific grounding, zero unsupported specifics, zero proposed specifics, zero causality overclaims, and preserved uncertainty.
+
+The deterministic evaluator left the historical incident paraphrase as the only ordinary conservative semantic candidate. GPT-OSS judged that claim as `SUPPORTED_FACT` using `previous-incidents`, producing one semantic disagreement and one semantic upgrade. Semantic usage remained separate from generation:
+
+- semantic model calls: `1`;
+- semantic input tokens: `458`;
+- semantic output tokens: `254`.
+
+This confirms the main v2.2 infrastructure goal: generation and semantic judgement can use different providers/models, judge identity is explicit, self-judging is disabled, and semantic cost remains independently observable.
+
+### Calibration bug exposed by the smoke
+
+The same run also exposed an evaluator inconsistency unrelated to the Groq judge. The answer stated that the available evidence **does not prove** that the deployment caused the incident. Whole-answer Grounding v1 correctly reported zero causal overclaims, but sentence-level Claim Evaluation initially re-ran Grounding v1 on that sentence and marked it as `grounding-v1-causality-overclaim:1`.
+
+The cause was granularity-sensitive uncertainty detection: whole-answer Grounding saw the surrounding `leading hypothesis` qualifier on the same paragraph line, while the claim evaluator split the paragraph into sentences. The uncertainty vocabulary recognized `not proven` but not the equally explicit form `does not prove`.
+
+The deterministic claim evaluator now includes a narrow explicit causal-uncertainty rule for forms such as `not prove`, `not proved`, `not proven`, `cannot prove`, and `can't prove`. Those forms:
+
+- prevent a false sentence-level causality hard failure;
+- qualify the claim as an inference when evidence anchors exist;
+- do **not** weaken the existing fail-closed behavior for unqualified language such as `The deployment caused the incident.`
+
+A regression test freezes the exact causal sentence observed in the cross-model smoke. The corrected deterministic classification is `SUPPORTED_INFERENCE` with deployment/dependency evidence anchors, while the original unqualified causal-overclaim test remains fail-closed.
+
+No additional live provider call is required to validate this deterministic correction; the live smoke already validated the cross-model transport/routing behavior and the corrected classification is covered by the project quality gate.
+
+## Reproduction
 
 ```bash
 set -a
@@ -147,7 +181,7 @@ echo $?
 
 If `GROQ_API_KEY` is already loaded, a separate `SEMANTIC_GROQ_API_KEY` is not required.
 
-For an answer similar to the v2.1 calibration fixture, the expected routing behavior is one semantic call for the historical incident paraphrase. The semantic verdict itself is **not** predetermined. If GPT-OSS keeps it unsupported while the previous OpenAI self-judge upgraded it, that disagreement is useful evidence rather than a failure to hide.
+The semantic verdict is deliberately not predetermined for future answers. Agreement or disagreement between generator-side deterministic evaluation and an independent judge is calibration evidence rather than a success criterion by itself.
 
 ## Interpretation boundary
 
@@ -170,6 +204,6 @@ This phase deliberately does not add:
 - automatic consensus across multiple judges;
 - retries for judge failures;
 - semantic claim text to metadata-only traces;
-- any mechanism that overrides Grounding v1 hard failures.
+- any mechanism that overrides genuine Grounding v1 hard failures.
 
 A later phase can add a static labelled claim set and run a generator × judge matrix to measure agreement, false upgrades, false rejections, and cross-model bias without consuming fresh architecture runs.
