@@ -16,9 +16,7 @@ class LabelledClaimSetError(ValueError):
 def load_labelled_claims_v1() -> LabelledClaimSet:
     """Load and validate the packaged v1 claim set."""
     raw = (
-        files("autonomy_lab.evals")
-        .joinpath("labelled_claims_v1.json")
-        .read_text(encoding="utf-8")
+        files("autonomy_lab.evals").joinpath("labelled_claims_v1.json").read_text(encoding="utf-8")
     )
     try:
         decoded: Any = json.loads(raw)
