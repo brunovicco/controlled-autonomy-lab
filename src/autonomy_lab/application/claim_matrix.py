@@ -62,7 +62,10 @@ class ClaimJudgeMatrixRunner:
                         expected_kind=case.expected_kind,
                         deterministic_kind=deterministic_claim.kind,
                         deterministic_rationale=deterministic_claim.rationale,
+                        deterministic_evidence_sources=deterministic_claim.evidence_sources,
                         semantic_kind=None,
+                        semantic_rationale=None,
+                        semantic_evidence_sources=(),
                         final_kind=deterministic_claim.kind,
                         semantic_evaluated=False,
                         disagreement=False,
@@ -90,7 +93,12 @@ class ClaimJudgeMatrixRunner:
                     expected_kind=case.expected_kind,
                     deterministic_kind=deterministic_claim.kind,
                     deterministic_rationale=deterministic_claim.rationale,
+                    deterministic_evidence_sources=deterministic_claim.evidence_sources,
                     semantic_kind=(merged.semantic.verdict.claim_kind if merged.semantic else None),
+                    semantic_rationale=(merged.semantic.rationale if merged.semantic else None),
+                    semantic_evidence_sources=(
+                        merged.semantic.evidence_sources if merged.semantic else ()
+                    ),
                     final_kind=merged.final_kind,
                     semantic_evaluated=merged.semantic is not None,
                     disagreement=merged.disagreement,
