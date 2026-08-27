@@ -66,7 +66,7 @@ def configured_checks(root: Path) -> list[Check]:
     checks = [
         Check("lock", ("uv", "lock", "--check")),
         Check("lint", ("ruff", "check", ".")),
-        Check("format", ("ruff", "format", "--diff", ".")),
+        Check("format", ("ruff", "format", "--check", ".")),
         Check("architecture", (sys.executable, "scripts/validate_architecture.py")),
         Check("typing", ("mypy", *type_roots) if type_roots else ()),
         Check("tests", ("pytest",) if test_roots else ()),
