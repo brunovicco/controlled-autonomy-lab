@@ -1,8 +1,9 @@
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 
 
-def _fixture():
+def _fixture() -> tuple[Incident, tuple[EvidenceItem, ...]]:
     store = InMemoryIncidentStore()
     incident = store.get_incident("INC-001")
     return incident, store.get_evidence(incident)
