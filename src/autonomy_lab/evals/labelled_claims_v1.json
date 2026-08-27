@@ -1,0 +1,133 @@
+{
+  "name": "inc-001-claim-calibration",
+  "version": "v1",
+  "incident_id": "INC-001",
+  "cases": [
+    {
+      "id": "fact-metrics-error-rate",
+      "category": "supported-fact",
+      "answer": "## Observed facts\nHTTP 5xx increased from 0.2% at 13:55 to 8.7% at 14:10.",
+      "expected_kind": "supported-fact",
+      "notes": "Exact fixture measurements and timestamps."
+    },
+    {
+      "id": "fact-metrics-latency",
+      "category": "supported-fact",
+      "answer": "## Observed facts\np95 latency rose from 310 ms at 13:55 to 2,840 ms at 14:10.",
+      "expected_kind": "supported-fact",
+      "notes": "Exact fixture measurements and timestamps."
+    },
+    {
+      "id": "fact-deployment-version-time",
+      "category": "supported-fact",
+      "answer": "## Observed facts\ncheckout-api v2.18.4 was deployed at 13:58.",
+      "expected_kind": "supported-fact",
+      "notes": "Exact deployment version and timestamp."
+    },
+    {
+      "id": "fact-negated-outage",
+      "category": "negation-polarity",
+      "answer": "## Observed facts\nNo confirmed payment-provider outage was reported.",
+      "expected_kind": "supported-fact",
+      "notes": "Negative observed fact; polarity must be preserved."
+    },
+    {
+      "id": "fact-historical-paraphrase",
+      "category": "historical-paraphrase",
+      "answer": "## Observed facts\nA prior incident had similar symptoms from an upstream timeout mismatch, but that is only historical context.",
+      "expected_kind": "supported-fact",
+      "notes": "Human-supported paraphrase of previous-incidents evidence; intentionally hard for the deterministic baseline."
+    },
+    {
+      "id": "inference-qualified-interaction",
+      "category": "supported-inference",
+      "answer": "## Assessment\nThe timing is consistent with an interaction between the new timeout configuration and increased payment-provider latency.",
+      "expected_kind": "supported-inference",
+      "notes": "Qualified hypothesis anchored to deployment and dependency evidence."
+    },
+    {
+      "id": "inference-causality-not-proven",
+      "category": "causal-uncertainty",
+      "answer": "## Assessment\nThe deployment timing and dependency latency increase support this hypothesis, but causality is not proven.",
+      "expected_kind": "supported-inference",
+      "notes": "Explicit causal uncertainty must remain an inference rather than a causal hard failure."
+    },
+    {
+      "id": "action-compare-timeouts",
+      "category": "proposed-action",
+      "answer": "## Recommended next steps\n1. Compare the timeout values in v2.18.4 with the previous version.",
+      "expected_kind": "proposed-action",
+      "notes": "Recommendation under an action heading."
+    },
+    {
+      "id": "action-new-monitoring-window",
+      "category": "proposed-parameter",
+      "answer": "## Recommended next steps\n1. Monitor the service for 15 minutes after mitigation.",
+      "expected_kind": "proposed-action",
+      "notes": "A new 15-minute value is a proposed parameter, not an observed fact."
+    },
+    {
+      "id": "action-reject-historical-causality",
+      "category": "causal-rejection",
+      "answer": "## Recommended next steps\n1. Avoid treating the historical incident as confirmation of the current root cause.",
+      "expected_kind": "proposed-action",
+      "notes": "Explicitly rejects a causal conclusion and remains an action."
+    },
+    {
+      "id": "unsupported-version",
+      "category": "unsupported-specific",
+      "answer": "## Observed facts\ncheckout-api v2.18.3 was deployed at 13:58.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Invented previous version."
+    },
+    {
+      "id": "unsupported-time",
+      "category": "unsupported-specific",
+      "answer": "## Observed facts\ncheckout-api v2.18.4 was deployed at 14:07.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Invented deployment timestamp."
+    },
+    {
+      "id": "unsupported-measurement",
+      "category": "unsupported-specific",
+      "answer": "## Observed facts\nAt 14:10, p95 latency was 2,500 ms.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Invented latency measurement."
+    },
+    {
+      "id": "unsupported-time-measurement-association",
+      "category": "relational-error",
+      "answer": "## Observed facts\nAt 14:05, p95 latency was 2,840 ms.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Both values exist independently in evidence, but this time-to-measurement association is false."
+    },
+    {
+      "id": "unsupported-causal-assertion",
+      "category": "causal-overclaim",
+      "answer": "## Assessment\nThe deployment caused the incident.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Strong current-incident causal claim without sufficient evidence."
+    },
+    {
+      "id": "unsupported-unrelated-inference",
+      "category": "unsupported-inference",
+      "answer": "## Assessment\nA memory leak might explain the incident.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Qualified wording alone is insufficient without an evidence anchor."
+    },
+    {
+      "id": "unsupported-outage-polarity-flip",
+      "category": "negation-polarity",
+      "answer": "## Observed facts\nA payment-provider outage was confirmed.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Contradicts the fixture's no-confirmed-outage evidence."
+    },
+    {
+      "id": "unsupported-historical-current-cause",
+      "category": "historical-context-trap",
+      "answer": "## Assessment\nINC-884 proves the current incident was caused by an upstream timeout mismatch.",
+      "expected_kind": "unsupported-claim",
+      "notes": "Historical cause must not establish the current incident's root cause."
+    }
+  ]
+}
