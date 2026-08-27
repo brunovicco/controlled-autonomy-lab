@@ -177,9 +177,7 @@ def _required(
         return value
     provider_name = f"{namespace}LLM_PROVIDER" if namespace else "LLM_PROVIDER"
     if namespace:
-        raise SystemExit(
-            f"{namespace}{name} or {name} is required when {provider_name}={provider}"
-        )
+        raise SystemExit(f"{namespace}{name} or {name} is required when {provider_name}={provider}")
     raise SystemExit(f"{name} is required when {provider_name}={provider}")
 
 
