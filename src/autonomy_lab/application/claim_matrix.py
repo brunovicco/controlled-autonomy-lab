@@ -48,8 +48,9 @@ class ClaimJudgeMatrixRunner:
                 evidence=evidence,
             )
             if len(deterministic_report.claims) != 1:
+                claim_count = len(deterministic_report.claims)
                 raise ClaimMatrixError(
-                    f"claim case {case.case_id} extracted {len(deterministic_report.claims)} claims; expected 1"
+                    f"claim case {case.case_id} extracted {claim_count} claims; expected 1"
                 )
             deterministic_claim = deterministic_report.claims[0]
 
