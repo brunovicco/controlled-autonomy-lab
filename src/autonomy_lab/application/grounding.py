@@ -38,6 +38,11 @@ _CAUSALITY_RE = re.compile(
     r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
     re.IGNORECASE,
 )
+_CAUSAL_REJECTION_RE = re.compile(
+    r"\b(?:avoid\s+(?:treat(?:ing)?|assum(?:e|ing)|claim(?:ing)?|conclud(?:e|ing))|"
+    r"(?:do\s+not|don't|never)\s+(?:treat|assume|claim|conclude))\b",
+    re.IGNORECASE,
+)
 _UNCERTAINTY_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
     r"suggests?\b|if\b|alternatively|correlation|not proven|no confirmed|not confirmed|"
@@ -501,7 +506,12 @@ class DeterministicGroundingEvaluator:
                 continue
             causal = _CAUSALITY_RE.search(line)
             section_is_qualified = bool(_UNCERTAINTY_RE.search(active_heading))
-            if causal is None or _UNCERTAINTY_RE.search(line) or section_is_qualified:
+            if (
+                causal is None
+                or _UNCERTAINTY_RE.search(line)
+                or _CAUSAL_REJECTION_RE.search(line)
+                or section_is_qualified
+            ):
                 continue
             if _supported_historical_causality(
                 line=line,

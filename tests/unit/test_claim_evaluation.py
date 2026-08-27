@@ -180,6 +180,26 @@ def test_causality_overclaim_is_fail_closed() -> None:
     assert claim.rationale == "grounding-v1-causality-overclaim:1"
 
 
+def test_explicit_not_prove_causal_language_is_supported_inference() -> None:
+    incident, evidence = _fixture()
+
+    report = DeterministicClaimEvaluatorV2().evaluate(
+        answer=(
+            "The deployment preceded the error increase, and the dependency became slower shortly "
+            "afterward, but the available evidence does not prove that the deployment caused the "
+            "incident or that the payment provider is the sole cause."
+        ),
+        incident=incident,
+        evidence=evidence,
+    )
+
+    claim = report.claims[0]
+    assert claim.kind is ClaimKind.SUPPORTED_INFERENCE
+    assert claim.rationale == "qualified-inference-with-evidence-anchor"
+    assert "deployments" in claim.evidence_sources
+    assert "dependencies" in claim.evidence_sources
+
+
 def test_unverified_declarative_paraphrase_is_conservative_unsupported() -> None:
     incident, evidence = _fixture()
 

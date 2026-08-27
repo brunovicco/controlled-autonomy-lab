@@ -28,6 +28,10 @@ _EPISTEMIC_INFERENCE_RE = re.compile(
     r"^(?:no confirmed|not confirmed|unconfirmed|no evidence)\b",
     re.IGNORECASE,
 )
+_EXPLICIT_CAUSAL_UNCERTAINTY_RE = re.compile(
+    r"\b(?:not\s+prov(?:e|ed|en)|cannot\s+prove|can't\s+prove)\b",
+    re.IGNORECASE,
+)
 _IMPERATIVE_RE = re.compile(
     r"^(?:compare|check|monitor|collect|inspect|validate|confirm|consider|prefer|"
     r"route|restore|revert|roll back|rollback|temporarily|escalate|review|measure|continue)\b",
@@ -198,6 +202,7 @@ def _is_inference(candidate: _ClaimCandidate) -> bool:
     return bool(
         _INFERENCE_RE.search(candidate.text)
         or _EPISTEMIC_INFERENCE_RE.search(candidate.text)
+        or _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(candidate.text)
         or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
     )
 
@@ -262,7 +267,9 @@ class DeterministicClaimEvaluatorV2:
                 rationale=f"grounding-v1-unsupported-specifics:{grounding.unsupported_count}",
                 evidence_sources=sources,
             )
-        if grounding.causality_overclaim_count:
+        if grounding.causality_overclaim_count and not _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(
+            candidate.text
+        ):
             return ClaimEvaluation(
                 claim=candidate.text,
                 kind=ClaimKind.UNSUPPORTED_CLAIM,
