@@ -143,12 +143,13 @@ class ClaimMatrixReport:
     def authority_false_positive_count(self) -> int:
         """Return deterministic supported results that disagree with the human label.
 
-        These rows are important because the current authority policy does not send already-supported
+        These rows matter because the current authority policy does not send already-supported
         deterministic claims to the semantic judge.
         """
         supported = {ClaimKind.SUPPORTED_FACT, ClaimKind.SUPPORTED_INFERENCE}
         return sum(
-            row.deterministic_kind in supported and not row.deterministic_correct for row in self.rows
+            row.deterministic_kind in supported and not row.deterministic_correct
+            for row in self.rows
         )
 
     def _ratio(self, count: int) -> float:
