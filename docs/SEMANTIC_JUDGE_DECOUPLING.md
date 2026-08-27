@@ -139,7 +139,7 @@ The deterministic evaluator left the historical incident paraphrase as the only 
 
 This confirms the main v2.2 infrastructure goal: generation and semantic judgement can use different providers/models, judge identity is explicit, self-judging is disabled, and semantic cost remains independently observable.
 
-### Calibration bug exposed by the smoke
+### Calibration bug exposed by the first smoke
 
 The same run also exposed an evaluator inconsistency unrelated to the Groq judge. The answer stated that the available evidence **does not prove** that the deployment caused the incident. Whole-answer Grounding v1 correctly reported zero causal overclaims, but sentence-level Claim Evaluation initially re-ran Grounding v1 on that sentence and marked it as `grounding-v1-causality-overclaim:1`.
 
@@ -151,9 +151,48 @@ The deterministic claim evaluator now includes a narrow explicit causal-uncertai
 - qualify the claim as an inference when evidence anchors exist;
 - do **not** weaken the existing fail-closed behavior for unqualified language such as `The deployment caused the incident.`
 
-A regression test freezes the exact causal sentence observed in the cross-model smoke. The corrected deterministic classification is `SUPPORTED_INFERENCE` with deployment/dependency evidence anchors, while the original unqualified causal-overclaim test remains fail-closed.
+A regression test freezes the exact causal sentence observed in the first cross-model smoke. The corrected deterministic classification is `SUPPORTED_INFERENCE` with deployment/dependency evidence anchors, while the original unqualified causal-overclaim test remains fail-closed.
 
-No additional live provider call is required to validate this deterministic correction; the live smoke already validated the cross-model transport/routing behavior and the corrected classification is covered by the project quality gate.
+## Second cross-model smoke
+
+A second live run repeated the same provider split after the sentence-level causal-uncertainty fix:
+
+- generator: OpenAI `gpt-5.6-luna`;
+- judge: Groq `openai/gpt-oss-20b`;
+- `self_judge: false`;
+- generator model calls: `2`;
+- tool calls: `5`;
+- semantic model calls: `1`;
+- semantic input tokens: `458`;
+- semantic output tokens: `306`;
+- semantic disagreements: `1`;
+- final semantic support ratio: `1.0`.
+
+The historical incident paraphrase again remained the only ordinary conservative semantic candidate and GPT-OSS again upgraded it to `SUPPORTED_FACT` using `previous-incidents`. This is useful repeated calibration evidence for the decoupled routing path, but it is still not a judge-accuracy estimate.
+
+### Causal-rejection false positive exposed by the second smoke
+
+The second answer contained the recommendation:
+
+```text
+Avoid treating the historical incident as confirmation of the current root cause.
+```
+
+Grounding v1 initially matched `root cause` and reported a causality overclaim even though the sentence explicitly rejects that conclusion. Claim Evaluation correctly treated the sentence as a proposed action, which made the mismatch visible.
+
+Grounding v1 now recognizes a deliberately narrow set of explicit causal-rejection forms, including `avoid treating`, `avoid assuming`, `do not treat`, `do not assume`, `never claim`, and related bounded variants. This prevents advisory language that rejects a causal conclusion from being counted as the conclusion itself.
+
+The correction does **not** suppress causality checks merely because text appears under a recommendation heading. An unqualified statement such as:
+
+```text
+The deployment is the root cause of the incident.
+```
+
+continues to produce a causality overclaim. Both the observed rejection sentence and the unqualified control are frozen as regression tests.
+
+The project quality gate after this correction passes with 122 tests plus Ruff lint/format, architecture validation, strict MyPy, Bandit, and pip-audit.
+
+No additional provider call is required to validate this second deterministic correction: both OpenAI→Groq live smokes already validated the decoupled transport/routing behavior, while the correction itself is deterministic and regression-tested.
 
 ## Reproduction
 
