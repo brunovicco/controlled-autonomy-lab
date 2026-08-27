@@ -1,4 +1,4 @@
-"""Evaluate the packaged human-labelled claim set with deterministic and optional semantic judges."""
+"""Evaluate the packaged human-labelled claim set and optional semantic judge."""
 
 import argparse
 import json
