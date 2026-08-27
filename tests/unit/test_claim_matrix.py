@@ -4,8 +4,13 @@ from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.adapters.labelled_claims import load_labelled_claims_v1
 from autonomy_lab.application.claim_matrix import ClaimJudgeMatrixRunner
 from autonomy_lab.application.semantic_claim_evaluation import SemanticClaimEvaluatorV21
-from autonomy_lab.domain.autonomy import ModelTurn, ModelUsage
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident, ModelTurn, ModelUsage
 from autonomy_lab.domain.claim_evaluation import ClaimKind
+from autonomy_lab.domain.claim_matrix import (
+    ClaimMatrixReport,
+    ClaimMatrixRow,
+    LabelledClaimSet,
+)
 
 
 class StaticSemanticJudge:
@@ -20,7 +25,9 @@ class StaticSemanticJudge:
         if "A prior incident had similar symptoms from an upstream timeout mismatch" in claim:
             body = {
                 "verdict": "supported-fact",
-                "rationale": "previous-incidents evidence semantically supports the historical claim",
+                "rationale": (
+                    "previous-incidents evidence semantically supports the historical claim"
+                ),
                 "evidence_sources": ["previous-incidents"],
             }
         else:
@@ -35,14 +42,14 @@ class StaticSemanticJudge:
         )
 
 
-def _fixture():
+def _fixture() -> tuple[LabelledClaimSet, Incident, tuple[EvidenceItem, ...]]:
     claim_set = load_labelled_claims_v1()
     store = InMemoryIncidentStore()
     incident = store.get_incident(claim_set.incident_id)
     return claim_set, incident, store.get_evidence(incident)
 
 
-def _row(report, case_id: str):
+def _row(report: ClaimMatrixReport, case_id: str) -> ClaimMatrixRow:
     return next(row for row in report.rows if row.case_id == case_id)
 
 
