@@ -88,9 +88,7 @@ def test_semantic_matrix_can_correct_only_eligible_conservative_misses() -> None
     claim_set, incident, evidence = _fixture()
     judge = StaticSemanticJudge()
 
-    report = ClaimJudgeMatrixRunner(
-        semantic=SemanticClaimEvaluatorV21(model=judge)
-    ).evaluate(
+    report = ClaimJudgeMatrixRunner(semantic=SemanticClaimEvaluatorV21(model=judge)).evaluate(
         claim_set=claim_set,
         incident=incident,
         evidence=evidence,
