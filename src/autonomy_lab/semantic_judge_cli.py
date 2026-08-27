@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import sys
 from collections.abc import Sequence
 
 import autonomy_lab.cli as base_cli
