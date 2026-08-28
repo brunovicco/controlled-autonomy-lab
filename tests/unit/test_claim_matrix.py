@@ -53,7 +53,7 @@ def _row(report: ClaimMatrixReport, case_id: str) -> ClaimMatrixRow:
     return next(row for row in report.rows if row.case_id == case_id)
 
 
-def test_deterministic_matrix_surfaces_known_blind_spots() -> None:
+def test_deterministic_matrix_reduces_authority_false_positives() -> None:
     claim_set, incident, evidence = _fixture()
 
     report = ClaimJudgeMatrixRunner().evaluate(
@@ -63,12 +63,12 @@ def test_deterministic_matrix_surfaces_known_blind_spots() -> None:
     )
 
     assert report.case_count == 18
-    assert report.deterministic_correct_count == 15
-    assert report.deterministic_accuracy == 15 / 18
-    assert report.final_correct_count == 15
+    assert report.deterministic_correct_count == 17
+    assert report.deterministic_accuracy == 17 / 18
+    assert report.final_correct_count == 17
     assert report.false_rejection_count == 1
-    assert report.false_upgrade_count == 2
-    assert report.authority_false_positive_count == 2
+    assert report.false_upgrade_count == 0
+    assert report.authority_false_positive_count == 0
     assert report.semantic_evaluated_count == 0
 
     historical = _row(report, "fact-historical-paraphrase")
@@ -77,14 +77,19 @@ def test_deterministic_matrix_surfaces_known_blind_spots() -> None:
 
     relational = _row(report, "unsupported-time-measurement-association")
     assert relational.expected_kind is ClaimKind.UNSUPPORTED_CLAIM
-    assert relational.deterministic_kind is ClaimKind.SUPPORTED_FACT
+    assert relational.deterministic_kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert relational.deterministic_rationale == "deterministic-authority-unsupported-association"
 
     historical_trap = _row(report, "unsupported-historical-current-cause")
     assert historical_trap.expected_kind is ClaimKind.UNSUPPORTED_CLAIM
-    assert historical_trap.deterministic_kind is ClaimKind.SUPPORTED_INFERENCE
+    assert historical_trap.deterministic_kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert (
+        historical_trap.deterministic_rationale
+        == "deterministic-authority-historical-current-causality"
+    )
 
 
-def test_semantic_matrix_can_correct_only_eligible_conservative_misses() -> None:
+def test_semantic_matrix_can_finish_remaining_eligible_conservative_miss() -> None:
     claim_set, incident, evidence = _fixture()
     judge = StaticSemanticJudge()
 
@@ -94,13 +99,13 @@ def test_semantic_matrix_can_correct_only_eligible_conservative_misses() -> None
         evidence=evidence,
     )
 
-    assert report.final_correct_count == 16
-    assert report.final_accuracy == 16 / 18
+    assert report.final_correct_count == 18
+    assert report.final_accuracy == 1.0
     assert report.corrected_count == 1
     assert report.regressed_count == 0
     assert report.false_rejection_count == 0
-    assert report.false_upgrade_count == 2
-    assert report.authority_false_positive_count == 2
+    assert report.false_upgrade_count == 0
+    assert report.authority_false_positive_count == 0
     assert report.semantic_evaluated_count == 3
     assert report.semantic_model_calls == 3
     assert report.semantic_usage == ModelUsage(input_tokens=30, output_tokens=15)
@@ -116,4 +121,10 @@ def test_semantic_matrix_can_correct_only_eligible_conservative_misses() -> None
 
     relational = _row(report, "unsupported-time-measurement-association")
     assert relational.semantic_evaluated is False
-    assert relational.final_kind is ClaimKind.SUPPORTED_FACT
+    assert relational.final_kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert relational.resolution == "deterministic-hard-failure"
+
+    historical_trap = _row(report, "unsupported-historical-current-cause")
+    assert historical_trap.semantic_evaluated is False
+    assert historical_trap.final_kind is ClaimKind.UNSUPPORTED_CLAIM
+    assert historical_trap.resolution == "deterministic-hard-failure"

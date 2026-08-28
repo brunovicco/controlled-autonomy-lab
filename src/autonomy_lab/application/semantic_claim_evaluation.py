@@ -40,7 +40,9 @@ class SemanticClaimEvaluationError(ValueError):
 
 
 def _is_hard_failure(claim: ClaimEvaluation) -> bool:
-    return claim.kind is ClaimKind.UNSUPPORTED_CLAIM and claim.rationale.startswith("grounding-v1-")
+    if claim.kind is not ClaimKind.UNSUPPORTED_CLAIM:
+        return False
+    return claim.rationale.startswith(("grounding-v1-", "deterministic-authority-"))
 
 
 def _is_semantic_candidate(claim: ClaimEvaluation) -> bool:
