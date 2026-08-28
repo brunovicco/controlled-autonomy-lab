@@ -3,6 +3,10 @@
 import re
 from dataclasses import dataclass
 
+from autonomy_lab.application.claim_authority_guards import (
+    has_unsupported_explicit_time_measurement_association,
+    promotes_historical_context_to_current_causality,
+)
 from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
 from autonomy_lab.domain.autonomy import EvidenceItem, Incident
 from autonomy_lab.domain.claim_evaluation import ClaimEvaluation, ClaimEvaluationReport, ClaimKind
@@ -208,12 +212,13 @@ def _is_inference(candidate: _ClaimCandidate) -> bool:
 
 
 class DeterministicClaimEvaluatorV2:
-    """Classify claims conservatively using fixture evidence plus Grounding v1 hard signals.
+    """Classify claims conservatively using fixture evidence plus deterministic hard signals.
 
     This baseline intentionally does not pretend to perform semantic entailment. A semantic
     evaluator may upgrade paraphrases or nuanced inferences, but it must not erase deterministic
-    unsupported-specific or causality findings. A small bounded near-verbatim matcher handles
-    high-confidence deployment/dependency paraphrases before semantic escalation.
+    unsupported-specific, relational, historical-context, or causality findings. A small bounded
+    near-verbatim matcher handles high-confidence deployment/dependency paraphrases before semantic
+    escalation.
     """
 
     def __init__(
@@ -274,6 +279,29 @@ class DeterministicClaimEvaluatorV2:
                 claim=candidate.text,
                 kind=ClaimKind.UNSUPPORTED_CLAIM,
                 rationale=f"grounding-v1-causality-overclaim:{grounding.causality_overclaim_count}",
+                evidence_sources=sources,
+            )
+
+        if has_unsupported_explicit_time_measurement_association(
+            candidate.text,
+            evidence=evidence,
+        ):
+            return ClaimEvaluation(
+                claim=candidate.text,
+                kind=ClaimKind.UNSUPPORTED_CLAIM,
+                rationale="deterministic-authority-unsupported-association",
+                evidence_sources=sources,
+            )
+
+        if promotes_historical_context_to_current_causality(
+            candidate.text,
+            incident=incident,
+            evidence=evidence,
+        ):
+            return ClaimEvaluation(
+                claim=candidate.text,
+                kind=ClaimKind.UNSUPPORTED_CLAIM,
+                rationale="deterministic-authority-historical-current-causality",
                 evidence_sources=sources,
             )
 
