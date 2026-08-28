@@ -1,0 +1,90 @@
+name: anthropic-full-calibration
+
+on:
+  push:
+    branches:
+      - feat/labelled-claim-judge-matrix-v3
+    paths:
+      - .github/workflows/anthropic-full-calibration.yml
+
+permissions:
+  contents: read
+
+jobs:
+  calibration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      LLM_PROVIDER: anthropic
+      CLAUDE_MODEL: claude-sonnet-5
+      LLM_MAX_TOKENS: "4000"
+      LLM_TIMEOUT_SECONDS: "60"
+      SEMANTIC_LLM_PROVIDER: anthropic
+      SEMANTIC_CLAUDE_MODEL: claude-sonnet-5
+      SEMANTIC_LLM_MAX_TOKENS: "1000"
+      SEMANTIC_LLM_TIMEOUT_SECONDS: "60"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version: 0.11.28
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Verify Anthropic secret
+        shell: bash
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY repository secret is not configured."
+            exit 3
+          fi
+          echo "Anthropic secret is configured."
+
+      - name: Human-labelled matrix with Anthropic judge
+        run: |
+          uv run python -m autonomy_lab.claim_matrix_cli --semantic --json \
+            | tee anthropic-claim-matrix.json
+
+      - name: Anthropic bounded-agent calibration
+        run: |
+          uv run autonomy-lab run agent \
+            --incident INC-001 \
+            --grounding \
+            --claims \
+            --json \
+            | tee anthropic-agent-smoke.json
+
+      - name: Anthropic repeated benchmark 5x6
+        run: |
+          uv run autonomy-lab benchmark \
+            --incident INC-001 \
+            --runs 5 \
+            --output results/anthropic-sonnet-5-r5 \
+            --run-interval-seconds 10
+
+      - name: Collect calibration bundle
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p calibration-artifacts
+          cp anthropic-claim-matrix.json calibration-artifacts/ 2>/dev/null || true
+          cp anthropic-agent-smoke.json calibration-artifacts/ 2>/dev/null || true
+          cp -R results/anthropic-sonnet-5-r5 calibration-artifacts/ 2>/dev/null || true
+
+      - name: Upload calibration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anthropic-full-calibration
+          path: calibration-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
