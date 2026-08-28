@@ -40,7 +40,8 @@ _CAUSALITY_RE = re.compile(
 )
 _CAUSAL_REJECTION_RE = re.compile(
     r"\b(?:avoid\s+(?:treat(?:ing)?|assum(?:e|ing)|claim(?:ing)?|conclud(?:e|ing))|"
-    r"(?:do\s+not|don't|never)\s+(?:treat|assume|claim|conclude))\b",
+    r"(?:do\s+not|don't|never)\s+(?:treat|assume|claim|conclude)|"
+    r"before\s+(?:declaring|claiming|concluding))\b",
     re.IGNORECASE,
 )
 _UNCERTAINTY_RE = re.compile(
