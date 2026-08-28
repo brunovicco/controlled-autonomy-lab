@@ -82,7 +82,7 @@ _EVIDENCE = {
             source="deployments",
             summary=(
                 "checkout-api v2.19.1 deployed at 09:08 with payment-provider timeout reduced "
-                "from 3s to 800ms. Rollback at 09:24 restored the prior timeout and recovery "
+                "from 3s to 800ms. Rollback at 09:24 restored the prior 3s timeout and recovery "
                 "followed. A controlled replay reproduced the failure with v2.19.1. Root cause "
                 "confirmed for INC-002: the v2.19.1 800ms timeout regression caused the checkout "
                 "errors."

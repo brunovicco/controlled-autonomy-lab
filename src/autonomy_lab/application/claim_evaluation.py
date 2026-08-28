@@ -15,6 +15,7 @@ _HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(?P<title>.+?)\s*$")
 _BOLD_HEADING_RE = re.compile(r"^\s*\*\*(?P<title>.+?)\*\*\s*:?[ \t]*$")
 _LIST_PREFIX_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9`*])")
+_MARKDOWN_TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{3,}:?$")
 _PROPOSAL_HEADING_RE = re.compile(
     r"\b(?:recommend\w*|next[- ]?steps?|actions?|plan|checks?|mitigation|remediation)\b",
     re.IGNORECASE,
@@ -29,7 +30,8 @@ _INFERENCE_RE = re.compile(
     re.IGNORECASE,
 )
 _EPISTEMIC_INFERENCE_RE = re.compile(
-    r"^(?:no confirmed|not confirmed|unconfirmed|no evidence)\b",
+    r"^(?:no(?:\s+single)?\s+confirmed|not confirmed|unconfirmed|no evidence|"
+    r"no causal conclusion)\b",
     re.IGNORECASE,
 )
 _EXPLICIT_CAUSAL_UNCERTAINTY_RE = re.compile(
@@ -92,11 +94,19 @@ def _heading_title(line: str) -> str | None:
     return None
 
 
+def _is_markdown_table_separator(line: str) -> bool:
+    if not (line.startswith("|") and line.endswith("|")):
+        return False
+    cells = [cell.strip() for cell in line.strip("|").split("|")]
+    return bool(cells) and all(_MARKDOWN_TABLE_SEPARATOR_CELL_RE.fullmatch(cell) for cell in cells)
+
+
 def _extract_claims(answer: str) -> tuple[_ClaimCandidate, ...]:
     """Extract non-heading, non-empty sentence-like claims while retaining section context."""
     heading = ""
     claims: list[_ClaimCandidate] = []
-    for raw_line in answer.splitlines():
+    lines = answer.splitlines()
+    for index, raw_line in enumerate(lines):
         stripped = raw_line.strip()
         if not stripped:
             continue
@@ -104,9 +114,21 @@ def _extract_claims(answer: str) -> tuple[_ClaimCandidate, ...]:
         if title is not None:
             heading = title
             continue
+        if _is_markdown_table_separator(stripped):
+            continue
+        if (
+            stripped.startswith("|")
+            and stripped.endswith("|")
+            and index + 1 < len(lines)
+            and _is_markdown_table_separator(lines[index + 1].strip())
+        ):
+            continue
         list_item = _LIST_PREFIX_RE.match(stripped) is not None
         content = _LIST_PREFIX_RE.sub("", stripped).strip()
         if not content:
+            continue
+        if content.endswith(":") and _HYPOTHESIS_HEADING_RE.search(content):
+            heading = content.removesuffix(":").strip()
             continue
         for sentence in _SENTENCE_BOUNDARY_RE.split(content):
             claim = sentence.strip()
