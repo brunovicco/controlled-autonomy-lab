@@ -127,6 +127,8 @@ The claim replay deliberately retains two conservative `INC-004` misses:
 
 The calibration objective is therefore **not** to force a `100%` claim-support ratio. It is to remove deterministic evaluator noise without weakening the authority boundary or pretending to solve contextual entailment lexically.
 
+The final regression suite contains 167 tests and passes Ruff lint/format, strict MyPy, architecture validation, Bandit, pip-audit, and the project coverage threshold.
+
 ## Frozen benchmark boundary
 
 The existing 90-run OpenAI/Groq/Anthropic architecture benchmark remains frozen on:
