@@ -38,6 +38,10 @@ _CAUSALITY_RE = re.compile(
     r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
     re.IGNORECASE,
 )
+_CONFIRMED_CURRENT_CAUSE_RE = re.compile(
+    r"\broot cause confirmed for\s+(?P<incident>INC-\d+)\b",
+    re.IGNORECASE,
+)
 _CAUSAL_REJECTION_RE = re.compile(
     r"\b(?:avoid\s+(?:treat(?:ing)?|assum(?:e|ing)|claim(?:ing)?|conclud(?:e|ing))|"
     r"(?:do\s+not|don't|never)\s+(?:treat|assume|claim|conclude)|"
@@ -71,6 +75,18 @@ _CAUSAL_TAIL_STOPWORDS = {
     "to",
     "was",
     "were",
+}
+_CAUSAL_CONTENT_STOPWORDS = _CAUSAL_TAIL_STOPWORDS | {
+    "cause",
+    "caused",
+    "causes",
+    "causing",
+    "confirmed",
+    "current",
+    "error",
+    "errors",
+    "incident",
+    "root",
 }
 
 
@@ -322,6 +338,40 @@ def _word_tokens(text: str) -> set[str]:
     return {token.lower() for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", text)}
 
 
+def _causal_content_tokens(text: str, *, current_incident_id: str) -> set[str]:
+    tokens = _word_tokens(text) - _CAUSAL_CONTENT_STOPWORDS
+    tokens.discard(current_incident_id.lower())
+    return tokens
+
+
+def _supported_current_causality(
+    *,
+    line: str,
+    reference: str,
+    current_incident_id: str,
+) -> bool:
+    """Accept current causality only when the fixture explicitly confirms that root cause."""
+    claim_tokens = _causal_content_tokens(line, current_incident_id=current_incident_id)
+    if len(claim_tokens) < 2:
+        return False
+
+    for reference_line in reference.splitlines():
+        confirmation = _CONFIRMED_CURRENT_CAUSE_RE.search(reference_line)
+        if confirmation is None:
+            continue
+        if confirmation.group("incident").upper() != current_incident_id.upper():
+            continue
+        if _UNCERTAINTY_RE.search(reference_line) or _CAUSAL_REJECTION_RE.search(reference_line):
+            continue
+        evidence_tokens = _causal_content_tokens(
+            reference_line,
+            current_incident_id=current_incident_id,
+        )
+        if len(claim_tokens & evidence_tokens) >= 2:
+            return True
+    return False
+
+
 def _supported_historical_causality(
     *,
     line: str,
@@ -512,6 +562,12 @@ class DeterministicGroundingEvaluator:
                 or _UNCERTAINTY_RE.search(line)
                 or _CAUSAL_REJECTION_RE.search(line)
                 or section_is_qualified
+            ):
+                continue
+            if _supported_current_causality(
+                line=line,
+                reference=reference,
+                current_incident_id=current_incident_id,
             ):
                 continue
             if _supported_historical_causality(
