@@ -1,0 +1,41 @@
+name: Apply association newline fix
+
+on:
+  push:
+    branches:
+      - feat/multiple-incident-fixtures-v3-2
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/multiple-incident-fixtures-v3-2
+      - name: Patch reference association segmentation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/autonomy_lab/application/grounding.py")
+          text = path.read_text()
+          old = 'for segment in re.split(r",\\s*|\\.\\s+", reference):'
+          new = 'for segment in re.split(r",\\s*|\\.\\s+|\\n", reference):'
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one association split, got {text.count(old)}")
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit patch
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/autonomy_lab/application/grounding.py
+          git commit -m "fix: split fixture associations at evidence boundaries"
+          git push origin HEAD:feat/multiple-incident-fixtures-v3-2
