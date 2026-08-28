@@ -180,14 +180,85 @@ The test double:
 Under that controlled test:
 
 ```text
-deterministic:             15 / 18 = 83.3%
-final after semantic merge:16 / 18 = 88.9%
-corrected by semantic:      1
-regressed by semantic:      0
-remaining false upgrades:   2
+deterministic:              15 / 18 = 83.3%
+final after semantic merge: 16 / 18 = 88.9%
+corrected by semantic:       1
+regressed by semantic:       0
+remaining false upgrades:    2
 ```
 
 The two remaining errors are the authority false positives above. The test demonstrates merge-policy behavior, not semantic-model quality.
+
+## Live Anthropic calibration
+
+A bounded live matrix was run with Anthropic as the independent semantic judge:
+
+```text
+provider:     anthropic
+model:        claude-sonnet-5
+max tokens:   1000
+cases:        18
+```
+
+Observed result:
+
+```text
+deterministic:              15 / 18 = 83.3%
+final after semantic merge: 16 / 18 = 88.9%
+semantic evaluated:          3
+semantic disagreements:      1
+corrected by semantic:       1
+regressed by semantic:       0
+false upgrades:              2
+false rejections:            0
+authority false positives:   2
+semantic model calls:        3
+semantic input tokens:       1928
+semantic output tokens:      254
+```
+
+Claude upgraded only the historical paraphrase from `UNSUPPORTED_CLAIM` to `SUPPORTED_FACT`, citing `previous-incidents`. It left the unanchored memory-leak hypothesis and the outage polarity flip unsupported.
+
+The two final errors were unchanged because both are deterministic-supported authority false positives and therefore never reached the judge. This live result reproduces the controlled merge-policy test without turning the model verdict into ground truth.
+
+### Live smoke regression discovered during Anthropic calibration
+
+The Anthropic bounded-agent smoke also exposed a Grounding v1 false positive in procedural language:
+
+```text
+... confirm whether reverting resolves the issue before declaring root cause.
+```
+
+The phrase was incorrectly flagged because the lexical causality matcher saw `root cause`, even though the sentence explicitly delays any root-cause declaration until after validation.
+
+The evaluator now treats narrow `before declaring|claiming|concluding` constructions as non-assertive causal guardrail language. A regression test preserves both sides of the boundary:
+
+```text
+before declaring root cause
+→ not an overclaim
+
+The deployment is the root cause of the incident.
+→ remains fail-closed
+```
+
+The original Anthropic smoke predates this deterministic fix, so its recorded global causality count should not be interpreted as the corrected evaluator result.
+
+## Anthropic 5×6 execution note
+
+A complete Anthropic 5×6 architecture run also completed successfully with `claude-sonnet-5`:
+
+| Pattern | Success | p50 latency | Grounding |
+| --- | ---: | ---: | ---: |
+| augmented | 5/5 | 15,219.1 ms | 93.3% |
+| chaining | 5/5 | 39,367.7 ms | 87.7% |
+| routing | 5/5 | 13,766.0 ms | 84.6% |
+| parallel | 5/5 | 36,756.8 ms | 93.4% |
+| evaluator-optimizer | 5/5 | 16,560.5 ms | 100.0% |
+| agent | 5/5 | 16,829.7 ms | 92.2% |
+
+All 30 runs completed without rate limits or provider errors.
+
+This run was executed on commit `521dd029a93b866a0955a29f32c2744fcfe57874`, not on the historical frozen benchmark commit used for the OpenAI/Groq 60-run comparison. It is therefore retained as Anthropic evidence for the current revision, **not** merged into an apples-to-apples three-provider benchmark table. A frozen-commit Anthropic rerun is required before making direct comparative claims against the historical OpenAI/Groq results.
 
 ## Metrics
 
@@ -246,7 +317,20 @@ uv run python -m autonomy_lab.claim_matrix_cli \
   --json
 ```
 
-If `GROQ_API_KEY` is already available, `SEMANTIC_GROQ_API_KEY` is optional because the namespaced configuration falls back to the provider-specific key.
+Example with Anthropic:
+
+```bash
+export SEMANTIC_LLM_PROVIDER=anthropic
+export SEMANTIC_CLAUDE_MODEL=claude-sonnet-5
+export SEMANTIC_LLM_MAX_TOKENS=1000
+export SEMANTIC_LLM_TIMEOUT_SECONDS=60
+
+uv run python -m autonomy_lab.claim_matrix_cli \
+  --semantic \
+  --json
+```
+
+If the provider-specific API key is already available, the namespaced semantic credential is optional because semantic configuration falls back to that provider key.
 
 A judge configuration/provider/schema failure returns exit code `2` while preserving the deterministic baseline in the output.
 
@@ -276,8 +360,10 @@ into the more useful question:
 
 The current policy handles hard unsupported specifics well, but the labelled set demonstrates that **deterministic false positives are more dangerous than deterministic false negatives under one-way semantic escalation**, because false negatives can be selectively reviewed while false positives are accepted as final.
 
+The live Anthropic calibration reinforces the same finding: a capable independent judge corrected the one eligible conservative miss without regressions, yet it could not touch the two deterministic-supported false positives because the authority policy never exposed those rows to semantic review.
+
 That finding should guide the next evaluator change before expanding semantic-judge complexity.
 
 ## Next calibration
 
-After the PR is green, one bounded live run can evaluate the same fixed 18-case set with an independent semantic judge. That run should be recorded separately from the architecture benchmark and interpreted against the human labels above.
+The next benchmark-specific calibration is an Anthropic rerun on the same frozen commit used by the historical OpenAI/Groq benchmark. That run should remain separate from the claim-matrix work and use identical benchmark semantics before any three-provider comparison is published.
