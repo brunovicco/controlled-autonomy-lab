@@ -174,9 +174,9 @@ _EVIDENCE = {
         EvidenceItem(
             source="runbook",
             summary=(
-                "Root cause remains unconfirmed for INC-004. Capture distributed traces, database "
-                "saturation, and runtime resource evidence before attributing cause; do not promote "
-                "timing correlation to causality."
+                "Root cause remains unconfirmed for INC-004. Capture distributed traces, "
+                "database saturation, and runtime resource evidence before attributing cause; "
+                "do not promote timing correlation to causality."
             ),
         ),
         EvidenceItem(
