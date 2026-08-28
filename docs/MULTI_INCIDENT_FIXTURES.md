@@ -88,6 +88,45 @@ must not be penalized merely for being causal
 
 The goal is calibrated epistemic behavior, not universal abstention.
 
+## Live smoke and deterministic replay calibration
+
+Three live `claude-sonnet-5` bounded-agent smokes were run against `INC-002`, `INC-003`, and `INC-004` before merge.
+
+All three used the same topology:
+
+- 2 generator model calls;
+- 5 read-only tool calls;
+- all five evidence tools before the final answer.
+
+At the architecture level the expected epistemic posture was observed:
+
+- `INC-002` concluded the confirmed deployment/timeout regression cause;
+- `INC-003` identified the confirmed payment-provider incident while preserving a caveat about independent raw-log verification;
+- `INC-004` explicitly abstained from a root-cause conclusion and requested additional evidence.
+
+The original live outputs then became fixed replay inputs for the deterministic evaluators. Replaying identical text avoids provider variance and consumes no additional API quota.
+
+Smoke-derived regressions now cover:
+
+- HTTP status plurals such as `503s` so they are not parsed as `503 seconds`;
+- spelled-out fixture durations and equivalent numeric paraphrases;
+- timeline association extraction across evidence/newline boundaries;
+- locally explicit Markdown timeline relationships;
+- runbook methodology statements that mention causal standards without asserting a new current cause;
+- explicit causal meta/rejection language;
+- reported-cause attribution;
+- explicit abstention language, including inline Markdown emphasis;
+- Markdown table structure and discourse labels that should not become claims;
+- narrow exclusion inferences anchored to explicit negative fixture evidence;
+- action-oriented statements that should remain proposed actions rather than observed facts.
+
+The claim replay deliberately retains two conservative `INC-004` misses:
+
+1. a faithful historical paraphrase of `INC-655`, which remains a good semantic-escalation candidate;
+2. `Could be a partial trigger or coincidental.`, which depends on sentence-to-sentence context that Claim Evaluation v2 does not currently propagate.
+
+The calibration objective is therefore **not** to force a `100%` claim-support ratio. It is to remove deterministic evaluator noise without weakening the authority boundary or pretending to solve contextual entailment lexically.
+
 ## Frozen benchmark boundary
 
 The existing 90-run OpenAI/Groq/Anthropic architecture benchmark remains frozen on:
@@ -109,9 +148,10 @@ Before launching a large repeated matrix:
 1. run one smoke per new incident with a single provider;
 2. inspect the model answer plus Grounding/Claim Evaluation for causal posture;
 3. freeze any evaluator bugs as deterministic regressions;
-4. only then run repeated multi-incident experiments.
+4. replay the exact saved answers through the corrected evaluators;
+5. only then run multi-incident architecture experiments.
 
-A first repeated experiment should favor breadth over repetition. For example:
+The first architecture experiment should favor breadth over repetition:
 
 ```text
 4 incidents × 6 patterns × 1 run × 3 provider bundles = 72 executions
