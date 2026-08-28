@@ -24,6 +24,21 @@ Avoid treating the historical incident as confirmation of the current root cause
     assert report.causality_overclaims == ()
 
 
+def test_pre_declaration_root_cause_language_is_not_an_overclaim() -> None:
+    incident, evidence = _fixture()
+    answer = """## Recommended Next Steps
+Monitor error rate/latency for 10-15 min post any change to confirm whether reverting resolves the issue before declaring root cause.
+"""
+
+    report = DeterministicGroundingEvaluator().evaluate(
+        answer=answer,
+        incident=incident,
+        evidence=evidence,
+    )
+
+    assert report.causality_overclaims == ()
+
+
 def test_unqualified_root_cause_statement_remains_fail_closed() -> None:
     incident, evidence = _fixture()
 
