@@ -1,9 +1,9 @@
 from autonomy_lab.adapters.incidents import InMemoryIncidentStore
 from autonomy_lab.application.claim_evaluation import DeterministicClaimEvaluatorV2
-from autonomy_lab.domain.claim_evaluation import ClaimKind
+from autonomy_lab.domain.claim_evaluation import ClaimEvaluationReport, ClaimKind
 
 
-def _evaluate(incident_id: str, answer: str):
+def _evaluate(incident_id: str, answer: str) -> ClaimEvaluationReport:
     store = InMemoryIncidentStore()
     incident = store.get_incident(incident_id)
     return DeterministicClaimEvaluatorV2().evaluate(
@@ -22,7 +22,10 @@ def test_inc002_structural_intro_is_not_counted_as_claim() -> None:
 
 
 def test_inc002_provider_outage_exclusion_is_supported_inference() -> None:
-    answer = "This is important because it eliminates third-party outage as an alternative explanation."
+    answer = (
+        "This is important because it eliminates third-party outage as an alternative "
+        "explanation."
+    )
 
     report = _evaluate("INC-002", answer)
 
