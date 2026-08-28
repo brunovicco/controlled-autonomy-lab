@@ -2,6 +2,8 @@
 
 This document records live benchmark evidence for Controlled Autonomy Lab. It is intentionally narrower than a model leaderboard: the main purpose is to observe how the same incident-analysis task behaves as control moves from deterministic application code toward model-directed execution.
 
+For the compact three-provider comparison, see [`FROZEN_THREE_PROVIDER_BENCHMARK.md`](FROZEN_THREE_PROVIDER_BENCHMARK.md).
+
 ## Experimental question
 
 > Given the same incident, evidence boundary, grounding evaluator, and autonomy pattern, what changes when control flow and provider/model behavior change?
@@ -10,7 +12,7 @@ The strongest comparisons are **within one provider**, where the incident and pr
 
 ## Shared setup
 
-Both repeated experiments below used:
+All three repeated experiments used:
 
 - incident: `INC-001`;
 - Git commit: `1f8f8b892b033957c73e6260f12edb75e321462c`;
@@ -23,7 +25,7 @@ Both repeated experiments below used:
 - successful-run aggregates for execution and grounding metrics;
 - all attempted runs for reliability rates.
 
-Across the two experiments, **60/60 pattern executions completed successfully**. Neither experiment recorded a rate-limit failure or provider error.
+Across the three experiments, **90/90 pattern executions completed successfully**. No repeated experiment recorded a rate-limit failure or provider error.
 
 The six patterns were:
 
@@ -62,9 +64,9 @@ Configuration:
 
 **Evaluator-optimizer also reached `100%` specific grounding** with two model calls and `9.38s` p50. In this experiment the extra evaluation step did not create the highest latency or token use.
 
-**The bounded agent reached `100%` specific grounding with one observed trajectory across five runs.** It averaged two model calls and five tool calls, with `10.38s` p50. For this model/provider configuration, delegating tool selection to the model did not produce the largest latency or a loss in the deterministic specific-grounding metric.
+**The bounded agent reached `100%` specific grounding with one observed trajectory across five runs.** It averaged two model calls and five tool calls, with `10.38s` p50.
 
-**Chaining and parallelization were the two weakest OpenAI patterns on specific grounding and also the two slowest.** Chaining reached `90.0%` grounding at `28.32s` p50; parallel reached `92.8%` at `24.79s` p50. This is evidence against assuming that more deterministic workflow structure automatically improves factual specificity.
+**Chaining and parallelization were the two weakest OpenAI patterns on specific grounding and also the two slowest.** Chaining reached `90.0%` grounding at `28.32s` p50; parallel reached `92.8%` at `24.79s` p50.
 
 A separate caution is visible in **routing**: it had `100%` specific grounding while averaging `1.8` causality overclaims per run. Grounding Evaluation v1 deliberately treats exact factual support and causal overclaim as different dimensions. Therefore, `100%` specific grounding must not be read as “fully correct answer.”
 
@@ -94,48 +96,99 @@ Configuration:
 
 **Augmented was the lowest-latency Groq pattern** (`1.49s` p50). Evaluator-optimizer and routing followed at roughly `2.11s`.
 
-**Evaluator-optimizer had the highest specific-grounding ratio in the Groq experiment** (`88.5%`) and no average causal overclaim, while requiring two model calls. This is a useful signal, but five repetitions on one incident are not enough to claim general superiority.
+**Evaluator-optimizer had the highest specific-grounding ratio in the Groq experiment** (`88.5%`) and no average causal overclaim, while requiring two model calls.
 
-**Chaining was the weakest Groq pattern on specific grounding** (`67.4%`). It also averaged `1.2` causal overclaims and `2.0` proposed specifics per run. Together with the OpenAI result, chaining is the most consistent candidate for deeper investigation.
+**Chaining was the weakest Groq pattern on specific grounding** (`67.4%`). It also averaged `1.2` causal overclaims and `2.0` proposed specifics per run.
 
-**The bounded agent showed substantially more trajectory variance than any other pattern.** Five runs produced four unique trajectories, with `5.2` model calls and `4.2` tool calls on average. This contrasts with the OpenAI agent, which produced one unique trajectory and averaged two model calls plus five tools.
+**The bounded agent showed substantially more trajectory variance than any other pattern.** Five runs produced four unique trajectories, with `5.2` model calls and `4.2` tool calls on average.
 
-This difference is important to the lab's control question: once the model owns tool selection and the next step, provider/model behavior can affect the execution path itself, not just the final wording.
+## Experiment 3 — Anthropic Claude Sonnet 5
+
+Configuration:
+
+- provider: `anthropic`;
+- model: `claude-sonnet-5`;
+- transport: Anthropic Messages API;
+- max output tokens: `4000`;
+- timeout: `60s`;
+- reasoning effort: provider-defined/default;
+- interval between benchmark attempts: `10s`;
+- status: complete (`30/30`).
+
+| Pattern | Calls | Tools | Avg tokens | p50 latency | Unsupported | Proposed | Causality | Grounding | Trajectories |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Augmented | 1.0 | 0.0 | 1,786 | 15,713.2 ms | 0.6 | 0.0 | 0.6 | 95.3% | 1 |
+| Chaining | 3.0 | 0.0 | 6,027 | 39,311.0 ms | 1.2 | 0.2 | 1.2 | 82.1% | 1 |
+| Routing | 2.0 | 0.0 | 1,827 | 14,397.9 ms | 2.0 | 0.0 | 1.8 | 84.6% | 1 |
+| Parallel | 4.0 | 0.0 | 9,284 | 40,371.3 ms | 0.6 | 0.0 | 1.4 | 94.8% | 1 |
+| Evaluator-optimizer | 2.0 | 0.0 | 3,053 | 16,210.0 ms | 0.4 | 0.4 | 0.8 | 96.7% | 1 |
+| Agent | 2.0 | 5.0 | 4,354 | 16,876.2 ms | 0.8 | 0.6 | 1.4 | 93.6% | 1 |
+
+### Anthropic observations
+
+**Routing was the lowest-latency Anthropic pattern** (`14.40s` p50), followed by augmented (`15.71s`) and evaluator-optimizer (`16.21s`).
+
+**Evaluator-optimizer had the highest Anthropic specific-grounding ratio** (`96.7%`). It was also materially cheaper and faster than chaining and parallelization within the Anthropic bundle.
+
+**Chaining again had the lowest specific-grounding ratio** (`82.1%`). Parallelization had the highest p50 (`40.37s`) and highest average token usage (`9,284`).
+
+**The bounded Anthropic agent showed the same coarse topology as OpenAI**: two model calls, five tool calls, and one observed trajectory across five runs.
+
+The Anthropic CSV reported an uncertainty-preservation rate of `1.0` for every pattern in this sample. This is descriptive evidence for these runs, not a general provider guarantee.
 
 ## Cross-provider view
 
-The table below is descriptive only. It does **not** isolate model quality because provider transport and reasoning configuration differ.
+The table below is descriptive only. It does **not** isolate model quality because provider transport, reasoning configuration, output budget, tokenization, infrastructure, and pacing differ.
 
-| Pattern | OpenAI grounding | Groq grounding | Difference | OpenAI p50 | Groq p50 | OpenAI/Groq latency ratio |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Augmented | 100.0% | 88.3% | +11.7 pp | 8.85s | 1.49s | 6.0x |
-| Chaining | 90.0% | 67.4% | +22.6 pp | 28.32s | 4.26s | 6.6x |
-| Routing | 100.0% | 87.8% | +12.2 pp | 8.61s | 2.12s | 4.1x |
-| Parallel | 92.8% | 87.1% | +5.7 pp | 24.79s | 3.09s | 8.0x |
-| Evaluator-optimizer | 100.0% | 88.5% | +11.5 pp | 9.38s | 2.11s | 4.4x |
-| Agent | 100.0% | 82.6% | +17.4 pp | 10.38s | 4.00s | 2.6x |
+### Specific grounding
 
-Across these runs, the OpenAI configuration had the higher specific-grounding ratio in every pattern, while the Groq configuration had materially lower p50 latency in every pattern. That is a property of the **tested provider/model/configuration bundles**, not proof of an inherent model ranking.
+| Pattern | OpenAI | Groq | Anthropic |
+| --- | ---: | ---: | ---: |
+| Augmented | 100.0% | 88.3% | 95.3% |
+| Chaining | 90.0% | 67.4% | 82.1% |
+| Routing | 100.0% | 87.8% | 84.6% |
+| Parallel | 92.8% | 87.1% | 94.8% |
+| Evaluator-optimizer | 100.0% | 88.5% | 96.7% |
+| Agent | 100.0% | 82.6% | 93.6% |
 
-Raw token counts should not be compared as equivalent units across providers. Tokenizers, reasoning accounting, API transports, and provider usage semantics differ. Within a provider, token counts are still useful for understanding the relative cost of the six control-flow patterns.
+### p50 latency
+
+| Pattern | OpenAI | Groq | Anthropic |
+| --- | ---: | ---: | ---: |
+| Augmented | 8.85s | 1.49s | 15.71s |
+| Chaining | 28.32s | 4.26s | 39.31s |
+| Routing | 8.61s | 2.12s | 14.40s |
+| Parallel | 24.79s | 3.09s | 40.37s |
+| Evaluator-optimizer | 9.38s | 2.11s | 16.21s |
+| Agent | 10.38s | 4.00s | 16.88s |
+
+Across these runs, the OpenAI bundle had the higher specific-grounding ratio in five of six patterns; Anthropic was higher on parallelization. Groq had the lowest p50 latency in all six patterns. These are properties of the **tested provider/model/configuration bundles**, not proof of an inherent model ranking.
+
+Raw token counts should not be compared as equivalent units across providers. Within a provider, token counts are still useful for understanding the relative cost of the six control-flow patterns.
 
 ## Findings that currently have the strongest support
 
 ### 1. Chaining did not provide a grounding advantage
 
-Chaining had the lowest specific-grounding ratio in both provider experiments: `90.0%` on OpenAI and `67.4%` on Groq. It also had the highest p50 latency on OpenAI and the highest p50 among the non-agent Groq workflows except for the agent itself.
+Chaining had the lowest specific-grounding ratio in all three repeated experiments: `90.0%` on OpenAI, `67.4%` on Groq, and `82.1%` on Anthropic. It was also among the highest-latency patterns in every provider.
 
-A plausible mechanism is that sequential handoffs create multiple opportunities for unsupported inferences to be introduced and propagated, but the current experiment does **not** directly test that mechanism. It should be treated as a hypothesis for claim-level analysis, not as a demonstrated cause.
+A plausible mechanism is that sequential handoffs create multiple opportunities for unsupported inferences to be introduced and propagated, but the current experiment does **not** directly test that mechanism.
 
 ### 2. Evaluator-optimizer was consistently competitive
 
-Evaluator-optimizer reached `100%` specific grounding on OpenAI and the highest Groq grounding (`88.5%`). Its latency remained close to routing in both providers relative to chaining and parallelization.
+Evaluator-optimizer reached `100%` specific grounding on OpenAI and the highest grounding in both the Groq (`88.5%`) and Anthropic (`96.7%`) experiments.
 
-The result supports deeper study of evaluation/revision loops, but does not establish that an LLM evaluator is itself a proof of factual correctness. The project already separates evaluator-optimizer behavior from deterministic grounding evaluation for this reason.
+The result supports deeper study of evaluation/revision loops, but does not establish that an LLM evaluator is itself proof of factual correctness.
 
 ### 3. Agent autonomy exposed provider/model-dependent trajectory behavior
 
-The OpenAI agent produced one unique trajectory across five runs; the Groq agent produced four. OpenAI averaged `2.0` model calls and `5.0` tool calls, while Groq averaged `5.2` model calls and `4.2` tool calls.
+| Bundle | Model calls | Tool calls | Unique trajectories |
+| --- | ---: | ---: | ---: |
+| OpenAI | 2.0 | 5.0 | 1 |
+| Groq | 5.2 | 4.2 | 4 |
+| Anthropic | 2.0 | 5.0 | 1 |
+
+OpenAI and Anthropic produced the same coarse agent topology across five runs. Groq produced four unique trajectories, more model calls, and fewer tool calls on average.
 
 This is the clearest evidence so far for the lab's central distinction:
 
@@ -145,23 +198,27 @@ This statement is limited to the observed runs and does not claim that one traje
 
 ### 4. Specific grounding and causal discipline are separate
 
-The OpenAI routing pattern reached `100%` specific grounding while averaging `1.8` causal overclaims per run. This demonstrates why a single aggregate “hallucination score” would hide an important failure mode.
+High specific grounding did not guarantee low causal overclaim. OpenAI routing reached `100%` specific grounding while averaging `1.8` causal overclaims per run; Anthropic routing averaged the same `1.8` causality findings at `84.6%` specific grounding.
 
 Grounding Evaluation v1 therefore keeps factual-specific support, proposed parameters, causal overclaim, and uncertainty preservation separate.
+
+### 5. More model calls did not monotonically improve grounding
+
+Chaining and parallelization use more model calls than augmented or routing, but neither demonstrated a consistent grounding advantage. In this experiment, workflow complexity and factual grounding were not monotonic.
 
 ## Threats to validity
 
 These results should be read with several limitations:
 
 1. **One incident fixture.** All runs use `INC-001`; the findings may not generalize to different domains, ambiguity levels, tool sets, or evidence shapes.
-2. **Small sample.** Five repetitions per pattern are enough to reveal useful variance signals but not enough for strong statistical claims.
-3. **Provider bundle confounding.** OpenAI and Groq differ in model, transport, infrastructure, tokenization, max-output setting, and reasoning configuration.
-4. **Different output caps.** OpenAI used `4000`; Groq used `900`. Those caps were selected after provider-specific smoke calibration and make the repeated experiments operationally stable, but they prevent an apples-to-apples token-budget claim.
-5. **Different pacing.** OpenAI used a `2s` interval and Groq `30s`. The interval is only between independent pattern attempts and does not change the internal topology of a pattern, but it remains part of the experiment configuration.
-6. **Grounding evaluator scope.** Grounding Evaluation v1 checks a deliberately narrow set of exact factual specifics, associations, proposal contexts, and causal language. It is not an NLI system or universal correctness metric.
-7. **No persisted answer bodies.** Benchmark artifacts are metadata-only by design. Claim-level forensic analysis requires a separately approved observation mode or static captured fixtures; it cannot be reconstructed from `runs.jsonl` alone.
+2. **Small sample.** Five repetitions per pattern/provider reveal useful variance signals but are not enough for strong statistical claims.
+3. **Provider bundle confounding.** OpenAI, Groq, and Anthropic differ in model, transport, infrastructure, tokenization, max-output setting, reasoning configuration, and pacing.
+4. **Different output caps.** OpenAI and Anthropic used `4000`; Groq used `900`. The caps were selected after provider-specific smoke calibration and prevent an apples-to-apples token-budget claim.
+5. **Different pacing.** Attempt intervals were OpenAI `2s`, Groq `30s`, and Anthropic `10s`. These intervals are between independent benchmark attempts only and do not serialize calls inside a pattern.
+6. **Grounding evaluator scope.** Grounding Evaluation v1 is deliberately bounded and lexical/structural. It is not an NLI system or universal correctness metric.
+7. **No persisted answer bodies.** Benchmark artifacts are metadata-only by design. Claim-level forensic analysis requires separately approved observation or static fixtures.
 8. **Live-service variance.** Network and provider service conditions affect latency. The p50 values describe these runs, not guaranteed service-level behavior.
-9. **No cost normalization yet.** Token counts are recorded, but provider-specific USD cost was not normalized in this experiment.
+9. **No cost normalization yet.** Token counts are recorded, but provider-aware USD cost has not been normalized.
 
 ## What is not claimed
 
@@ -169,30 +226,33 @@ These experiments do not establish that:
 
 - agents are better than workflows;
 - workflows are safer than agents;
-- GPT-5.6 Luna is universally better than GPT-OSS 20B;
-- Groq is universally faster than OpenAI;
+- one provider/model is universally better than another;
+- Groq is universally faster than OpenAI or Anthropic;
+- evaluator-optimizer guarantees correctness;
+- chaining is universally bad;
 - more model calls necessarily reduce or increase hallucinations;
 - `100%` specific grounding means a response is fully correct;
-- an LLM evaluator's acceptance proves groundedness.
+- an LLM evaluator's acceptance proves groundedness;
+- raw token counts are directly comparable across providers.
 
 ## Next experiments
 
-The most useful next steps are:
+The most useful next steps are now:
 
-1. add Anthropic Claude Sonnet 5 as a third provider experiment once API credits are available;
-2. add a claim-level evaluation phase that classifies `SUPPORTED_FACT`, `SUPPORTED_INFERENCE`, `PROPOSED_ACTION`, and `UNSUPPORTED_CLAIM`;
-3. add static observed-run fixtures so evaluator development does not depend on live provider quota;
-4. compare evaluator-optimizer acceptance with deterministic/semantic grounding findings;
-5. analyze relational errors separately from bag-of-values factual errors;
-6. add provider-aware cost normalization in USD while preserving raw provider token metadata;
-7. repeat the experiment on additional incident fixtures before making broader architecture claims.
+1. repeat the six patterns across additional incident fixtures before increasing repetitions on `INC-001`;
+2. strengthen relational/contextual deterministic evaluation using the human-labelled claim matrix;
+3. compare static claim-evaluator behavior across independent semantic judges;
+4. add provider-aware cost normalization in USD while preserving raw provider token metadata;
+5. compare evaluator-optimizer acceptance with deterministic and semantic claim-level findings.
 
 ## Reproducibility note
 
-The repeated OpenAI and Groq experiments documented here were both executed from Git commit:
+The repeated OpenAI, Groq, and Anthropic experiments documented here were all executed from Git commit:
 
 ```text
 1f8f8b892b033957c73e6260f12edb75e321462c
 ```
 
-Earlier smoke and calibration runs used different transports, output budgets, pacing, or pre-hardening commits. They remain useful debugging evidence, but they are intentionally excluded from this repeated-experiment comparison.
+The Anthropic frozen run produced exactly `30` metadata rows in `runs.jsonl`, matching five repetitions across six patterns.
+
+Earlier smoke and calibration runs used different transports, output budgets, pacing, evaluators, or later commits. They remain useful debugging/calibration evidence, but they are intentionally excluded from this frozen repeated-experiment comparison.
