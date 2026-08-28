@@ -23,8 +23,7 @@ def test_inc002_structural_intro_is_not_counted_as_claim() -> None:
 
 def test_inc002_provider_outage_exclusion_is_supported_inference() -> None:
     answer = (
-        "This is important because it eliminates third-party outage as an alternative "
-        "explanation."
+        "This is important because it eliminates third-party outage as an alternative explanation."
     )
 
     report = _evaluate("INC-002", answer)
