@@ -45,7 +45,8 @@ _EXPLICIT_CAUSAL_UNCERTAINTY_RE = re.compile(
 _CAUSAL_META_RE = re.compile(
     r"\b(?:caveat\s+on\s+causality|standard\s+bar\s+for\s+establishing|"
     r"root\s+cause\s+confirmed\s+as\s+reported|reported\s+by\s+the\s+dependency\s+system|"
-    r"not\s+independently\s+re[- ]?derived|does(?:n't|\s+not)\s+change\s+the\s+technical\s+root\s+cause|"
+    r"not\s+independently\s+re[- ]?derived|"
+    r"does(?:n't|\s+not)\s+change\s+the\s+technical\s+root\s+cause|"
     r"unrelated\s+to\s+this\s+root\s+cause|irrelevant\s+to\s+this\s+root\s+cause|"
     r"unrelated\s+and\s+(?:explicitly\s+)?not\s+applicable)\b",
     re.IGNORECASE,
