@@ -1,0 +1,119 @@
+name: Apply multi-incident README refresh
+
+on:
+  push:
+    branches:
+      - feat/multiple-incident-fixtures-v3-2
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/multiple-incident-fixtures-v3-2
+      - name: Refresh portfolio narrative
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("README.md")
+          text = path.read_text()
+
+          def replace_section(text: str, start: str, end: str, replacement: str) -> str:
+              left = text.index(start)
+              right = text.index(end, left)
+              return text[:left] + replacement + "\n\n" + text[right:]
+
+          benchmark = '''### Repeated architecture benchmark
+
+Three repeated live experiments used the same `INC-001` fixture and the same frozen benchmark commit, with five runs per pattern and no hidden retries.
+
+Across OpenAI, Groq, and Anthropic, **90/90 pattern executions completed successfully**.
+
+| Pattern | OpenAI grounding | OpenAI p50 | Groq grounding | Groq p50 | Anthropic grounding | Anthropic p50 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Augmented | 100.0% | 8.85s | 88.3% | 1.49s | 95.3% | 15.71s |
+| Chaining | 90.0% | 28.32s | 67.4% | 4.26s | 82.1% | 39.31s |
+| Routing | 100.0% | 8.61s | 87.8% | 2.12s | 84.6% | 14.40s |
+| Parallel | 92.8% | 24.79s | 87.1% | 3.09s | 94.8% | 40.37s |
+| Evaluator-optimizer | 100.0% | 9.38s | 88.5% | 2.11s | 96.7% | 16.21s |
+| Agent | 100.0% | 10.38s | 82.6% | 4.00s | 93.6% | 16.88s |
+
+These are **provider/model/configuration bundle** results, not a pure model leaderboard. The providers used different transports, token budgets, reasoning settings, pacing, infrastructure, and token accounting.
+
+The strongest observations from the frozen dataset are:
+
+- chaining had the lowest specific-grounding ratio in all three provider experiments;
+- evaluator-optimizer was consistently competitive on grounding;
+- the bounded agent exposed provider/model-dependent trajectory behavior;
+- OpenAI and Anthropic agent runs converged on two model calls, five tools, and one trajectory, while Groq averaged 5.2 model calls, 4.2 tools, and produced four trajectories;
+- `100%` specific grounding did not imply full causal discipline—for example, OpenAI routing reached `100%` grounding while still producing causal overclaims.
+
+See [`docs/FROZEN_THREE_PROVIDER_BENCHMARK.md`](docs/FROZEN_THREE_PROVIDER_BENCHMARK.md) for the consolidated 90-run comparison and [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) for the underlying experiment record.'''
+          text = replace_section(
+              text,
+              "### Repeated architecture benchmark",
+              "### Claim-level calibration",
+              benchmark,
+          )
+
+          incidents = '''## Incident suite
+
+The lab now includes four bounded incident fixtures with the same five evidence categories available to every architecture:
+
+| Incident | Epistemic condition | Expected posture |
+| --- | --- | --- |
+| `INC-001` | deployment and dependency timing correlate; current cause unproven | preserve uncertainty |
+| `INC-002` | deployment regression confirmed by rollback + controlled reproduction | state the confirmed deployment cause |
+| `INC-003` | dependency outage explicitly confirmed by provider incident evidence | state the confirmed dependency cause |
+| `INC-004` | evidence remains inconclusive | abstain from a root-cause conclusion |
+
+The frozen 90-run architecture benchmark remains intentionally scoped to `INC-001`. The additional fixtures start a new experiment generation for testing whether architecture and evaluator behavior generalize across contrasting causal structures.
+
+See [`docs/MULTI_INCIDENT_FIXTURES.md`](docs/MULTI_INCIDENT_FIXTURES.md).'''
+          text = replace_section(text, "## Common incident", "## Control model", incidents)
+
+          text = text.replace(
+              "The newer claim/semantic layers do **not** reclassify the historical 60-run benchmark dataset.",
+              "The newer claim/semantic layers do **not** reclassify the historical 90-run benchmark dataset.",
+          )
+
+          next_experiments = '''## Next experiments
+
+The next work should test **breadth before repetition**:
+
+1. run one pass across four incidents × six patterns × three provider bundles (`72` executions) to expose broad architecture/incident interactions before increasing `n`;
+2. extend human-labelled claim calibration with claims derived from confirmed-cause and abstention scenarios;
+3. compare causal-discipline and abstention behavior by incident class without reclassifying the frozen 90-run dataset;
+4. add provider-aware cost normalization while preserving raw provider token metadata;
+5. repeat only the most informative multi-incident cells after the breadth pass identifies stable or divergent behavior;
+6. introduce A2A/MCP only if the evaluator, evidence provider, or another agent becomes a genuine remote process/service boundary.'''
+          text = replace_section(text, "## Next experiments", "## Quality gate", next_experiments)
+
+          documentation_anchor = "- [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) — repeated OpenAI/Groq live evidence\n"
+          documentation_replacement = (
+              "- [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) — frozen experiment record\n"
+              "- [`docs/FROZEN_THREE_PROVIDER_BENCHMARK.md`](docs/FROZEN_THREE_PROVIDER_BENCHMARK.md) — consolidated OpenAI/Groq/Anthropic 90-run evidence\n"
+              "- [`docs/MULTI_INCIDENT_FIXTURES.md`](docs/MULTI_INCIDENT_FIXTURES.md) — contrasting causal fixtures and next-generation experiment boundary\n"
+          )
+          if documentation_anchor not in text:
+              raise SystemExit("documentation anchor not found")
+          text = text.replace(documentation_anchor, documentation_replacement, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit refresh
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: refresh README for multi-incident evidence"
+          git push origin HEAD:feat/multiple-incident-fixtures-v3-2
