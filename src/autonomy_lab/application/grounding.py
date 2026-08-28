@@ -244,7 +244,7 @@ def _is_supported_pp(value: str, derived_pp: set[float]) -> bool:
 def _reference_time_measurement_associations(reference: str) -> set[tuple[str, str]]:
     """Extract exact and locally explicit timestamp-to-measurement fixture relations."""
     associations: set[tuple[str, str]] = set()
-    for segment in re.split(r",\s*|\.\s+", reference):
+    for segment in re.split(r",\s*|\.\s+|\n", reference):
         if "=" not in segment:
             continue
         times = list(_TIME_RE.finditer(segment))
