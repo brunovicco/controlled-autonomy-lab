@@ -120,14 +120,32 @@ Smoke-derived regressions now cover:
 - narrow exclusion inferences anchored to explicit negative fixture evidence;
 - action-oriented statements that should remain proposed actions rather than observed facts.
 
-The claim replay deliberately retains two conservative `INC-004` misses:
+### Final deterministic replay
+
+The same three saved live answers were replayed after the evaluator fixes. Grounding v1 is clean across all three incidents:
+
+| Incident | Grounding | Unsupported specifics | Causality overclaims |
+| --- | ---: | ---: | ---: |
+| `INC-002` | 100.0% | 0 | 0 |
+| `INC-003` | 100.0% | 0 | 0 |
+| `INC-004` | 100.0% | 0 | 0 |
+
+Claim Evaluation v2 improved without forcing all outputs to `100%`:
+
+| Incident | Supported facts | Supported inferences | Proposed actions | Unsupported claims | Evaluable claims | Support ratio |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `INC-002` | 9 | 6 | 6 | 0 | 15 | 100.0% |
+| `INC-003` | 8 | 9 | 5 | 0 | 17 | 100.0% |
+| `INC-004` | 1 | 8 | 5 | 2 | 11 | 81.82% |
+
+The two remaining `INC-004` misses are intentional calibration boundaries:
 
 1. a faithful historical paraphrase of `INC-655`, which remains a good semantic-escalation candidate;
 2. `Could be a partial trigger or coincidental.`, which depends on sentence-to-sentence context that Claim Evaluation v2 does not currently propagate.
 
 The calibration objective is therefore **not** to force a `100%` claim-support ratio. It is to remove deterministic evaluator noise without weakening the authority boundary or pretending to solve contextual entailment lexically.
 
-The final regression suite contains **167 tests** and the phase head `3d410c92748c98c7bf56f482df60c3bb6e2b175e` passed Ruff lint/format, strict MyPy, architecture validation, Bandit, pip-audit, and the project coverage threshold.
+The final regression suite contains **167 tests** and passes Ruff lint/format, strict MyPy, architecture validation, Bandit, pip-audit, and the project coverage threshold. The exact merge candidate SHA is tracked by PR #13 rather than embedded here so this document does not stale itself when documentation-only commits are added.
 
 ## Frozen benchmark boundary
 
