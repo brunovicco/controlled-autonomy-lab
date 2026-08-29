@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: feat/multi-incident-breadth-benchmark-v3-3
+      - name: Preserve generated string escapes
+        run: python -c "from pathlib import Path; p=Path('scripts/apply_breadth_patch.py'); s=p.read_text(); p.write_text(s.replace(\"breadth = '''\", \"breadth = r'''\", 1))"
       - name: Apply patch
         run: python scripts/apply_breadth_patch.py
       - name: Install Ruff
