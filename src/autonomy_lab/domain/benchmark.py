@@ -97,11 +97,9 @@ class PatternBenchmarkSummary:
     completed: int
     rate_limited: int
     provider_errors: int
-    bound_exceeded: int
     completion_rate: float
     rate_limit_rate: float
     provider_error_rate: float
-    bound_exceeded_rate: float
     mean_model_calls: float | None
     mean_tool_calls: float | None
     mean_input_tokens: float | None
@@ -113,11 +111,13 @@ class PatternBenchmarkSummary:
     mean_causality_overclaims: float | None
     mean_grounding_ratio: float | None
     uncertainty_preservation_rate: float | None
-    epistemic_evaluated: int
-    epistemic_aligned: int
-    epistemic_alignment_rate: float | None
-    epistemic_overclaimed: int
-    epistemic_over_hedged: int
-    epistemic_insufficient_abstention: int
-    epistemic_no_position: int
     unique_trajectories: int
+    bound_exceeded: int = 0
+    bound_exceeded_rate: float = 0.0
+    epistemic_evaluated: int = 0
+    epistemic_aligned: int = 0
+    epistemic_alignment_rate: float | None = None
+    epistemic_overclaimed: int = 0
+    epistemic_over_hedged: int = 0
+    epistemic_insufficient_abstention: int = 0
+    epistemic_no_position: int = 0
