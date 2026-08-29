@@ -8,6 +8,7 @@ dependencies = []
 
 [project.scripts]
 autonomy-lab = "autonomy_lab.cli:main"
+autonomy-lab-epistemic-benchmark = "autonomy_lab.epistemic_benchmark_cli:main"
 
 [dependency-groups]
 dev = [
