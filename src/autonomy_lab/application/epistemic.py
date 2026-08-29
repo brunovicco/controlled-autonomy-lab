@@ -74,11 +74,8 @@ def infer_evidence_posture(
 
 
 def _sentences(answer: str) -> tuple[str, ...]:
-    return tuple(
-        segment.strip()
-        for segment in re.split(r"(?<=[.!?])\s+|\n+", answer)
-        if segment.strip()
-    )
+    segments = re.split(r"(?<=[.!?])\s+|\n+", answer)
+    return tuple(segment.strip() for segment in segments if segment.strip())
 
 
 def _is_historical_sentence(sentence: str, incident: Incident) -> bool:
