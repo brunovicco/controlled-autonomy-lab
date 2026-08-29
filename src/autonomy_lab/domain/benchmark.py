@@ -4,6 +4,13 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from autonomy_lab.domain.autonomy import AutonomyPattern
+from autonomy_lab.domain.epistemic import EpistemicVerdict, EvidencePosture
+
+BENCHMARK_RECORD_SCHEMA_VERSION = "benchmark-record-v2"
+BENCHMARK_SUMMARY_SCHEMA_VERSION = "benchmark-summary-v2"
+BREADTH_MANIFEST_SCHEMA_VERSION = "breadth-v2"
+GROUNDING_EVALUATION_VERSION = "grounding-v1"
+EPISTEMIC_EVALUATION_VERSION = "epistemic-v4.1"
 
 
 class BenchmarkStatus(StrEnum):
@@ -67,6 +74,13 @@ class BenchmarkRecord:
     causality_overclaims: int | None = None
     grounding_ratio: float | None = None
     uncertainty_preserved: bool | None = None
+    epistemic_expected_posture: EvidencePosture | None = None
+    epistemic_verdict: EpistemicVerdict | None = None
+    epistemic_aligned: bool | None = None
+    causal_assertion_detected: bool | None = None
+    hedged_causal_language_detected: bool | None = None
+    abstention_detected: bool | None = None
+    uncertainty_language_detected: bool | None = None
     trajectory: tuple[str, ...] = ()
     retry_after: str | None = None
     error: str | None = None
@@ -81,9 +95,11 @@ class PatternBenchmarkSummary:
     completed: int
     rate_limited: int
     provider_errors: int
+    bound_exceeded: int
     completion_rate: float
     rate_limit_rate: float
     provider_error_rate: float
+    bound_exceeded_rate: float
     mean_model_calls: float | None
     mean_tool_calls: float | None
     mean_input_tokens: float | None
@@ -95,4 +111,11 @@ class PatternBenchmarkSummary:
     mean_causality_overclaims: float | None
     mean_grounding_ratio: float | None
     uncertainty_preservation_rate: float | None
+    epistemic_evaluated: int
+    epistemic_aligned: int
+    epistemic_alignment_rate: float | None
+    epistemic_overclaimed: int
+    epistemic_over_hedged: int
+    epistemic_insufficient_abstention: int
+    epistemic_no_position: int
     unique_trajectories: int
