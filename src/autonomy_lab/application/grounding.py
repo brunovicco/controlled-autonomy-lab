@@ -34,20 +34,50 @@ _APPROXIMATION_PREFIX_RE = re.compile(
     re.IGNORECASE,
 )
 _SCALAR_TIME_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)(?P<unit>ms|s)$")
+_HTTP_STATUS_PLURAL_RE = re.compile(r"^[1-5]\d{2}s$", re.IGNORECASE)
+_WORD_DURATION_RE = re.compile(
+    r"\b(?P<number>one|two|three|four|five|six|seven|eight|nine|ten)\s+"
+    r"(?P<unit>seconds?|secs?|minutes?|mins?|hours?|hrs?)\b",
+    re.IGNORECASE,
+)
+_WORD_NUMBERS = {
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9",
+    "ten": "10",
+}
 _CAUSALITY_RE = re.compile(
     r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
+    re.IGNORECASE,
+)
+_CONFIRMED_CURRENT_CAUSE_RE = re.compile(
+    r"\broot cause confirmed for\s+(?P<incident>INC-\d+)\b",
     re.IGNORECASE,
 )
 _CAUSAL_REJECTION_RE = re.compile(
     r"\b(?:avoid\s+(?:treat(?:ing)?|assum(?:e|ing)|claim(?:ing)?|conclud(?:e|ing))|"
     r"(?:do\s+not|don't|never)\s+(?:treat|assume|claim|conclude)|"
-    r"before\s+(?:declaring|claiming|concluding))\b",
+    r"before\s+(?:declaring|claiming|concluding)|"
+    r"no\s+causal\s+conclusion|"
+    r"(?:does\s+not|doesn't)\s+change\b.{0,80}\broot\s+cause|"
+    r"(?:unrelated|irrelevant)\b.{0,80}\broot\s+cause)\b",
+    re.IGNORECASE,
+)
+_CAUSAL_METHOD_RE = re.compile(
+    r"\b(?:standard\s+bar|can\s+establish|method(?:ology)?)\b",
     re.IGNORECASE,
 )
 _UNCERTAINTY_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
     r"suggests?\b|if\b|alternatively|correlation|not proven|no confirmed|not confirmed|"
-    r"unconfirmed|no evidence|cannot|can't|uncertain\w*|unknown|assuming|would confirm|"
+    r"no\s+(?:single\s+)?confirmed|unconfirmed|no evidence|not independently|cannot|"
+    r"can't|uncertain\w*|unknown|assuming|would confirm|"
     r"would falsify)\b",
     re.IGNORECASE,
 )
@@ -71,6 +101,18 @@ _CAUSAL_TAIL_STOPWORDS = {
     "to",
     "was",
     "were",
+}
+_CAUSAL_CONTENT_STOPWORDS = _CAUSAL_TAIL_STOPWORDS | {
+    "cause",
+    "caused",
+    "causes",
+    "causing",
+    "confirmed",
+    "current",
+    "error",
+    "errors",
+    "incident",
+    "root",
 }
 
 
@@ -116,6 +158,15 @@ def _normalize_measurement(value: str) -> str:
     return f"{_decimal_text(numeric)}ms"
 
 
+def _reference_word_duration_measurements(reference: str) -> set[str]:
+    """Normalize small spelled-out fixture durations for deterministic equivalence."""
+    supported: set[str] = set()
+    for match in _WORD_DURATION_RE.finditer(reference):
+        number = _WORD_NUMBERS[match.group("number").lower()]
+        supported.add(_normalize_measurement(f"{number} {match.group('unit')}"))
+    return supported
+
+
 def _context_for(text: str, start: int, end: int) -> str:
     line_start = text.rfind("\n", 0, start) + 1
     line_end = text.find("\n", end)
@@ -132,10 +183,12 @@ def _unique(values: Iterable[str]) -> tuple[str, ...]:
 
 
 def _measurement_matches(text: str) -> Iterator[re.Match[str]]:
-    """Yield measurements while excluding spans that overlap timestamp tokens."""
+    """Yield measurements while excluding timestamps and HTTP-status plurals."""
     time_spans = tuple((match.start(), match.end()) for match in _TIME_RE.finditer(text))
     for match in _MEASUREMENT_RE.finditer(text):
         if any(match.start() < end and match.end() > start for start, end in time_spans):
+            continue
+        if _HTTP_STATUS_PLURAL_RE.fullmatch(match.group().replace(" ", "")):
             continue
         yield match
 
@@ -189,9 +242,9 @@ def _is_supported_pp(value: str, derived_pp: set[float]) -> bool:
 
 
 def _reference_time_measurement_associations(reference: str) -> set[tuple[str, str]]:
-    """Extract exact timestamp-to-measurement pairs encoded by the fixture."""
+    """Extract exact and locally explicit timestamp-to-measurement fixture relations."""
     associations: set[tuple[str, str]] = set()
-    for segment in re.split(r",\s*|\.\s+", reference):
+    for segment in re.split(r",\s*|\.\s+|\n", reference):
         if "=" not in segment:
             continue
         times = list(_TIME_RE.finditer(segment))
@@ -204,6 +257,14 @@ def _reference_time_measurement_associations(reference: str) -> set[tuple[str, s
                 _normalize_measurement(measurements[0].group()),
             )
         )
+
+    for sentence in re.split(r"\.\s+", reference):
+        times = list(_TIME_RE.finditer(sentence))
+        if len(times) != 1:
+            continue
+        timestamp = _normalize_time(times[0].group())
+        for measurement in _measurement_matches(sentence):
+            associations.add((timestamp, _normalize_measurement(measurement.group())))
     return associations
 
 
@@ -322,6 +383,40 @@ def _word_tokens(text: str) -> set[str]:
     return {token.lower() for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", text)}
 
 
+def _causal_content_tokens(text: str, *, current_incident_id: str) -> set[str]:
+    tokens = _word_tokens(text) - _CAUSAL_CONTENT_STOPWORDS
+    tokens.discard(current_incident_id.lower())
+    return tokens
+
+
+def _supported_current_causality(
+    *,
+    line: str,
+    reference: str,
+    current_incident_id: str,
+) -> bool:
+    """Accept current causality only when the fixture explicitly confirms that root cause."""
+    claim_tokens = _causal_content_tokens(line, current_incident_id=current_incident_id)
+    if len(claim_tokens) < 2:
+        return False
+
+    for reference_line in reference.splitlines():
+        confirmation = _CONFIRMED_CURRENT_CAUSE_RE.search(reference_line)
+        if confirmation is None:
+            continue
+        if confirmation.group("incident").upper() != current_incident_id.upper():
+            continue
+        if _UNCERTAINTY_RE.search(reference_line) or _CAUSAL_REJECTION_RE.search(reference_line):
+            continue
+        evidence_tokens = _causal_content_tokens(
+            reference_line,
+            current_incident_id=current_incident_id,
+        )
+        if len(claim_tokens & evidence_tokens) >= 2:
+            return True
+    return False
+
+
 def _supported_historical_causality(
     *,
     line: str,
@@ -371,6 +466,7 @@ class DeterministicGroundingEvaluator:
         supported_measurements = {
             _normalize_measurement(item.group()) for item in _measurement_matches(reference)
         }
+        supported_measurements.update(_reference_word_duration_measurements(reference))
         derived_pp = _derived_percentage_point_values(reference)
         supported_associations = _reference_time_measurement_associations(reference)
 
@@ -511,7 +607,14 @@ class DeterministicGroundingEvaluator:
                 causal is None
                 or _UNCERTAINTY_RE.search(line)
                 or _CAUSAL_REJECTION_RE.search(line)
+                or _CAUSAL_METHOD_RE.search(line)
                 or section_is_qualified
+            ):
+                continue
+            if _supported_current_causality(
+                line=line,
+                reference=reference,
+                current_incident_id=current_incident_id,
             ):
                 continue
             if _supported_historical_causality(

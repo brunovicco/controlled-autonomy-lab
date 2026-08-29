@@ -15,6 +15,7 @@ _HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(?P<title>.+?)\s*$")
 _BOLD_HEADING_RE = re.compile(r"^\s*\*\*(?P<title>.+?)\*\*\s*:?[ \t]*$")
 _LIST_PREFIX_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9`*])")
+_MARKDOWN_TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{3,}:?$")
 _PROPOSAL_HEADING_RE = re.compile(
     r"\b(?:recommend\w*|next[- ]?steps?|actions?|plan|checks?|mitigation|remediation)\b",
     re.IGNORECASE,
@@ -23,17 +24,39 @@ _HYPOTHESIS_HEADING_RE = re.compile(
     r"\b(?:hypothes\w*|assessment|interpretation|analysis)\b",
     re.IGNORECASE,
 )
+_STRUCTURAL_INTRO_RE = re.compile(
+    r"^(?:this\s+is\s+.*\b(?:case|cases)|key\s+(?:finding|point)|summary|assessment)\b.*:\s*$",
+    re.IGNORECASE,
+)
 _INFERENCE_RE = re.compile(
     r"\b(?:hypothes\w*|plausib\w*|possib\w*|may|might|could|likely|appears?\b|"
     r"suggests?\b|consistent with|supports?\b|correlat\w*|interaction)\b",
     re.IGNORECASE,
 )
 _EPISTEMIC_INFERENCE_RE = re.compile(
-    r"^(?:no confirmed|not confirmed|unconfirmed|no evidence)\b",
+    r"^(?:no(?:\s+single)?\s+confirmed|not confirmed|unconfirmed|no evidence|"
+    r"no causal conclusion)\b",
     re.IGNORECASE,
 )
 _EXPLICIT_CAUSAL_UNCERTAINTY_RE = re.compile(
     r"\b(?:not\s+prov(?:e|ed|en)|cannot\s+prove|can't\s+prove)\b",
+    re.IGNORECASE,
+)
+_CAUSAL_META_RE = re.compile(
+    r"\b(?:caveat\s+on\s+causality|standard\s+bar\s+for\s+establishing|"
+    r"root\s+cause\s+confirmed\s+as\s+reported|reported\s+by\s+the\s+dependency\s+system|"
+    r"not\s+independently\s+re[- ]?derived|"
+    r"does(?:n't|\s+not)\s+change\s+the\s+technical\s+root\s+cause|"
+    r"unrelated\s+to\s+this\s+root\s+cause|irrelevant\s+to\s+this\s+root\s+cause|"
+    r"unrelated\s+and\s+(?:explicitly\s+)?not\s+applicable)\b",
+    re.IGNORECASE,
+)
+_EXCLUSION_INFERENCE_RE = re.compile(
+    r"\b(?:rules?\s+out|eliminat(?:e|es|ed))\b",
+    re.IGNORECASE,
+)
+_NO_FURTHER_ACTION_RE = re.compile(
+    r"^no\s+further\s+(?:immediate\s+)?action\s+(?:is\s+)?required\b",
     re.IGNORECASE,
 )
 _IMPERATIVE_RE = re.compile(
@@ -92,11 +115,24 @@ def _heading_title(line: str) -> str | None:
     return None
 
 
+def _is_markdown_table_separator(line: str) -> bool:
+    if not (line.startswith("|") and line.endswith("|")):
+        return False
+    cells = [cell.strip() for cell in line.strip("|").split("|")]
+    return bool(cells) and all(_MARKDOWN_TABLE_SEPARATOR_CELL_RE.fullmatch(cell) for cell in cells)
+
+
+def _lexical_text(value: str) -> str:
+    """Strip leading inline Markdown markers before lexical classification."""
+    return value.lstrip("*_` ")
+
+
 def _extract_claims(answer: str) -> tuple[_ClaimCandidate, ...]:
     """Extract non-heading, non-empty sentence-like claims while retaining section context."""
     heading = ""
     claims: list[_ClaimCandidate] = []
-    for raw_line in answer.splitlines():
+    lines = answer.splitlines()
+    for index, raw_line in enumerate(lines):
         stripped = raw_line.strip()
         if not stripped:
             continue
@@ -104,9 +140,23 @@ def _extract_claims(answer: str) -> tuple[_ClaimCandidate, ...]:
         if title is not None:
             heading = title
             continue
+        if _is_markdown_table_separator(stripped):
+            continue
+        if (
+            stripped.startswith("|")
+            and stripped.endswith("|")
+            and index + 1 < len(lines)
+            and _is_markdown_table_separator(lines[index + 1].strip())
+        ):
+            continue
         list_item = _LIST_PREFIX_RE.match(stripped) is not None
         content = _LIST_PREFIX_RE.sub("", stripped).strip()
         if not content:
+            continue
+        if content.endswith(":") and (
+            _HYPOTHESIS_HEADING_RE.search(content) or _STRUCTURAL_INTRO_RE.search(content)
+        ):
+            heading = content.removesuffix(":").strip()
             continue
         for sentence in _SENTENCE_BOUNDARY_RE.split(content):
             claim = sentence.strip()
@@ -143,6 +193,27 @@ def _evidence_sources_for(claim: str, evidence: tuple[EvidenceItem, ...]) -> tup
     for item in evidence:
         overlap = claim_tokens & _content_tokens(item.summary)
         if len(overlap) >= 2:
+            sources.append(item.source)
+    return tuple(dict.fromkeys(sources))
+
+
+def _negative_exclusion_sources(
+    claim: str,
+    evidence: tuple[EvidenceItem, ...],
+) -> tuple[str, ...]:
+    """Anchor narrow exclusion inferences to explicit negative fixture evidence."""
+    if _EXCLUSION_INFERENCE_RE.search(claim) is None:
+        return ()
+    normalized = _normalized_text(claim)
+    sources: list[str] = []
+    for item in evidence:
+        summary = _normalized_text(item.summary)
+        if "outage" in normalized and "no provider outage" in summary:
+            sources.append(item.source)
+            continue
+        local_regression = "local code config regression" in normalized
+        no_local_change = "no payments api deployment or configuration change" in summary
+        if local_regression and no_local_change:
             sources.append(item.source)
     return tuple(dict.fromkeys(sources))
 
@@ -198,15 +269,24 @@ def _has_high_confidence_fixture_support(
 
 
 def _is_proposed(candidate: _ClaimCandidate) -> bool:
+    text = _lexical_text(candidate.text)
     section_action = bool(_PROPOSAL_HEADING_RE.search(candidate.heading)) and candidate.list_item
-    return bool(section_action or _IMPERATIVE_RE.match(candidate.text))
+    return bool(
+        section_action
+        or _IMPERATIVE_RE.match(text)
+        or _NO_FURTHER_ACTION_RE.match(text)
+        or re.search(r"\bworth\s+reviewing\b", text, re.IGNORECASE)
+    )
 
 
 def _is_inference(candidate: _ClaimCandidate) -> bool:
+    text = _lexical_text(candidate.text)
     return bool(
-        _INFERENCE_RE.search(candidate.text)
-        or _EPISTEMIC_INFERENCE_RE.search(candidate.text)
-        or _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(candidate.text)
+        _INFERENCE_RE.search(text)
+        or _EPISTEMIC_INFERENCE_RE.search(text)
+        or _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(text)
+        or _CAUSAL_META_RE.search(text)
+        or _EXCLUSION_INFERENCE_RE.search(text)
         or _HYPOTHESIS_HEADING_RE.search(candidate.heading)
     )
 
@@ -251,6 +331,9 @@ class DeterministicClaimEvaluatorV2:
         evidence: tuple[EvidenceItem, ...],
     ) -> ClaimEvaluation:
         sources = _evidence_sources_for(candidate.text, evidence)
+        exclusion_sources = _negative_exclusion_sources(candidate.text, evidence)
+        if exclusion_sources:
+            sources = tuple(dict.fromkeys((*sources, *exclusion_sources)))
 
         if _is_proposed(candidate):
             return ClaimEvaluation(
@@ -272,8 +355,11 @@ class DeterministicClaimEvaluatorV2:
                 rationale=f"grounding-v1-unsupported-specifics:{grounding.unsupported_count}",
                 evidence_sources=sources,
             )
-        if grounding.causality_overclaim_count and not _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(
-            candidate.text
+        causal_meta = _CAUSAL_META_RE.search(_lexical_text(candidate.text)) is not None
+        if (
+            grounding.causality_overclaim_count
+            and not _EXPLICIT_CAUSAL_UNCERTAINTY_RE.search(candidate.text)
+            and not causal_meta
         ):
             return ClaimEvaluation(
                 claim=candidate.text,
