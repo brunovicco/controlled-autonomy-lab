@@ -1,18 +1,18 @@
 # Controlled Autonomy Lab
 
-> Same incident. Different levels of LLM autonomy. Multiple providers.
+> Same control patterns. Different evidence postures. Multiple providers.
 
-Controlled Autonomy Lab is a small Python reference implementation for comparing six LLM application architectures against the same bounded production incident.
+Controlled Autonomy Lab is a small Python reference implementation for comparing six LLM application architectures across bounded production-incident fixtures with different evidence postures.
 
 The central question is not whether agents are better than workflows. It is:
 
 > **Who owns the next step: deterministic application code or the model?**
 
-The lab makes that delegation boundary observable through execution topology, tool use, latency, token usage, deterministic grounding, claim-level evaluation, and selective semantic judgement.
+The lab makes that delegation boundary observable through execution topology, tool use, latency, token usage, deterministic grounding, claim-level evaluation, causal-authority checks, and selective semantic judgement.
 
 ## What this case demonstrates
 
-The same incident can be solved with six different control patterns:
+The same incident-analysis task can be implemented with six different control patterns:
 
 1. Augmented LLM
 2. Prompt chaining
@@ -21,7 +21,7 @@ The same incident can be solved with six different control patterns:
 5. Evaluator-optimizer
 6. Bounded tool-using agent
 
-The project then evaluates the resulting behavior through progressively stronger—but deliberately separate—layers:
+The project evaluates the resulting behavior through progressively stronger—but deliberately separate—layers:
 
 ```text
 pattern execution
@@ -53,32 +53,84 @@ An LLM judge may improve coverage for a conservative paraphrase miss, but it can
 
 ## Evidence so far
 
-### Repeated architecture benchmark
+### Frozen repeated architecture benchmark
 
-Two repeated live experiments used the same `INC-001` fixture and the same frozen benchmark commit, with five runs per pattern and no hidden retries.
+The repeated benchmark holds `INC-001` constant and measures repeated behavior across all six architecture patterns and three provider/model/configuration bundles.
 
-Across OpenAI and Groq, **60/60 pattern executions completed successfully**.
+```text
+1 incident × 6 patterns × 5 runs × 3 provider bundles = 90 executions
+```
 
-| Pattern | OpenAI grounding | OpenAI p50 | Groq grounding | Groq p50 |
-| --- | ---: | ---: | ---: | ---: |
-| Augmented | 100.0% | 8.85s | 88.3% | 1.49s |
-| Chaining | 90.0% | 28.32s | 67.4% | 4.26s |
-| Routing | 100.0% | 8.61s | 87.8% | 2.12s |
-| Parallel | 92.8% | 24.79s | 87.1% | 3.09s |
-| Evaluator-optimizer | 100.0% | 9.38s | 88.5% | 2.11s |
-| Agent | 100.0% | 10.38s | 82.6% | 4.00s |
+All **90/90 executions completed successfully**.
 
-These are **provider/model/configuration bundle** results, not a pure model leaderboard. OpenAI and Groq used different transports, token budgets, reasoning settings, pacing, infrastructure, and token accounting.
+Specific grounding by pattern:
 
-The strongest observations from the current dataset are:
+| Pattern | OpenAI | Groq | Anthropic |
+| --- | ---: | ---: | ---: |
+| Augmented | 100.0% | 88.3% | 95.3% |
+| Chaining | 90.0% | 67.4% | 82.1% |
+| Routing | 100.0% | 87.8% | 84.6% |
+| Parallel | 92.8% | 87.1% | 94.8% |
+| Evaluator-optimizer | 100.0% | 88.5% | 96.7% |
+| Agent | 100.0% | 82.6% | 93.6% |
 
-- chaining had the lowest specific-grounding ratio in both provider experiments;
-- evaluator-optimizer was consistently competitive on grounding;
-- the bounded agent exposed provider/model-dependent trajectory behavior;
-- OpenAI agent runs produced one trajectory across five runs, while Groq agent runs produced four;
-- `100%` specific grounding did not imply full causal discipline—for example, OpenAI routing reached `100%` grounding while still producing causal overclaims.
+The strongest repeated-benchmark observations are:
 
-See [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) for the full tables, methodology, threats to validity, and explicit non-claims.
+- chaining had the lowest specific-grounding ratio in all three provider bundles;
+- evaluator-optimizer remained competitive on grounding;
+- additional model calls did not monotonically improve grounding;
+- agent execution topology depended on the provider/model bundle;
+- OpenAI and Anthropic agents showed one coarse trajectory, while Groq produced four;
+- high specific grounding did not guarantee causal discipline.
+
+These are **provider/model/API/configuration bundle** results, not a pure model leaderboard.
+
+See [`docs/FROZEN_THREE_PROVIDER_BENCHMARK.md`](docs/FROZEN_THREE_PROVIDER_BENCHMARK.md) for the full frozen 90-run analysis.
+
+### Multi-incident breadth benchmark
+
+The breadth experiment changes the evidence posture while keeping the six architecture patterns fixed:
+
+```text
+4 incidents × 6 patterns × 1 run × 3 provider bundles = 72 attempted cells
+```
+
+Main generation:
+
+- **72 attempted cells**;
+- **59 successful cells**;
+- **12 Groq rate-limited cells**;
+- **1 Anthropic provider-error cell**;
+- quality metrics calculated only on `status=ok` cells;
+- provider failures preserved as availability evidence rather than imputed quality zeros.
+
+Architecture-level observed results:
+
+| Pattern | Observed | Mean grounding | Causal overclaims |
+| --- | ---: | ---: | ---: |
+| Augmented | 10/12 | 97.8% | 3 |
+| Chaining | 9/12 | 74.4% | 5 |
+| Routing | 10/12 | 92.8% | 2 |
+| Parallel | 10/12 | 94.9% | 7 |
+| Evaluator-optimizer | 10/12 | 97.6% | 4 |
+| Agent | 10/12 | 95.4% | **0** |
+
+The most important breadth observations are:
+
+- the bounded tool-using agent was the only pattern with zero detected causal overclaims across every observable cell;
+- chaining showed the weakest overall grounding/cost trade-off;
+- parallelization maintained high grounding but produced the most causal overclaims and the largest token footprint;
+- evaluator-optimizer sometimes revised its output, but an internal quality pass did not guarantee external causal correctness;
+- routing exposed provider/model-dependent control-flow selection;
+- specific grounding and causal authority remained separate evaluation dimensions;
+- lexical uncertainty-language detection saturated across all successful cells and is therefore not treated as proof of epistemic correctness.
+
+The result is **not** “agents win.” It supports the narrower hypothesis that bounded autonomy may help a system acquire evidence dynamically while operating inside explicit tool, action, and execution limits.
+
+See:
+
+- [`docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md`](docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md) for experiment design and frozen execution boundaries;
+- [`docs/MULTI_INCIDENT_BREADTH_RESULTS.md`](docs/MULTI_INCIDENT_BREADTH_RESULTS.md) for the full frozen analysis, threats to validity, and explicit non-claims.
 
 ### Claim-level calibration
 
@@ -99,9 +151,9 @@ See [`docs/CLAIM_EVALUATION.md`](docs/CLAIM_EVALUATION.md).
 
 The deterministic evaluator intentionally leaves some faithful paraphrases unsupported rather than pretending to perform NLI.
 
-Semantic Claim Evaluation v2.1 therefore evaluates only eligible conservative misses. Live calibration reduced semantic work from three calls to one after two current-incident facts were moved back into deterministic high-confidence matching.
+Semantic Claim Evaluation v2.1 therefore evaluates only eligible conservative misses. Live calibration reduced semantic work after current-incident facts were moved back into deterministic high-confidence matching.
 
-The remaining historical-context paraphrase required actual semantic entailment and was upgraded without weakening the Grounding v1 hard-failure rule.
+The remaining historical-context paraphrase required semantic entailment and was upgraded without weakening the Grounding v1 hard-failure rule.
 
 See [`docs/SEMANTIC_CLAIM_EVALUATION.md`](docs/SEMANTIC_CLAIM_EVALUATION.md).
 
@@ -109,41 +161,37 @@ See [`docs/SEMANTIC_CLAIM_EVALUATION.md`](docs/SEMANTIC_CLAIM_EVALUATION.md).
 
 Semantic Judge Decoupling v2.2 separates answer generation from semantic judgement.
 
-Two live bounded-agent smokes used:
-
-```text
-generator: OpenAI / gpt-5.6-luna
-judge:     Groq / openai/gpt-oss-20b
-self_judge: false
-```
-
-In both smokes:
-
-- the agent used two generator model calls and five tools;
-- only one conservative historical claim was escalated;
-- the Groq judge upgraded that claim using `previous-incidents`;
-- semantic usage remained separate from pattern execution metrics;
-- `disagreement` remained explicit rather than silently collapsed.
-
-The smokes also exposed two deterministic evaluator bugs that were fixed and frozen as regressions: explicit causal uncertainty (`does not prove ... caused`) and explicit causal rejection (`avoid treating ... as root cause`).
-
-These smokes validate the **routing and authority architecture**, not judge accuracy or ground truth.
+Two bounded-agent smokes used an OpenAI generator and Groq judge with `self_judge=false`. They validate the **routing and authority architecture**, not judge accuracy or ground truth.
 
 See [`docs/SEMANTIC_JUDGE_DECOUPLING.md`](docs/SEMANTIC_JUDGE_DECOUPLING.md).
 
-## Common incident
+## Incident fixtures
 
-Every architecture currently receives `INC-001`:
+`INC-001` remains the baseline incident used by the repeated architecture benchmark.
 
-- service: `checkout-api`;
-- HTTP 5xx rises from `0.2%` to `8.7%`;
-- p95 latency rises from `310ms` to `2840ms`;
-- `v2.18.4` was deployed at `13:58` with a new payment-provider timeout configuration;
-- payment-provider latency also increased shortly after `14:00`;
-- no provider outage is confirmed;
-- a previous incident provides historical context but is not evidence of the current root cause.
+It describes `checkout-api` with:
 
-The fixture intentionally creates correlation without proving causality. Good output must distinguish observed facts, hypotheses, historical context, and reversible recommendations.
+- HTTP 5xx rising from `0.2%` to `8.7%`;
+- p95 latency rising from `310ms` to `2840ms`;
+- deployment `v2.18.4` at `13:58` with a new payment-provider timeout configuration;
+- increased payment-provider latency shortly after `14:00`;
+- no confirmed provider outage;
+- historical incident context that is not evidence of the current root cause.
+
+The fixture intentionally creates correlation without proving current causality.
+
+The multi-incident breadth benchmark adds three contrasting evidence postures:
+
+| Incident | Evidence posture |
+| --- | --- |
+| `INC-001` | correlation without proven current cause |
+| `INC-002` | deployment cause explicitly confirmed |
+| `INC-003` | dependency cause explicitly confirmed |
+| `INC-004` | inconclusive evidence requiring abstention |
+
+The four fixtures test whether architecture behavior changes when the system is allowed to infer a cause, required to preserve uncertainty, or expected to abstain.
+
+Good output must distinguish observed facts, supported causal conclusions, hypotheses, historical context, and reversible recommendations.
 
 ## Control model
 
@@ -162,31 +210,22 @@ The distinction is architectural: when deterministic code owns the next step, ex
 
 ```text
 src/autonomy_lab/
-├── domain/
-│   ├── autonomy.py                    # provider-neutral run contracts
-│   ├── benchmark.py                   # benchmark records and summaries
-│   ├── grounding.py                   # deterministic grounding result types
-│   ├── claim_evaluation.py            # claim taxonomy/result contracts
-│   └── semantic_claim_evaluation.py   # semantic merge/disagreement contracts
+├── domain/                              # provider-neutral contracts
 ├── application/
-│   ├── model_ports.py                 # common text + tool-use model boundary
-│   ├── model_errors.py                # provider-neutral error contract
-│   ├── benchmark.py                   # repeated benchmark orchestration
-│   ├── grounding.py                   # fixture-backed deterministic grounding
-│   ├── claim_evaluation.py            # deterministic claim classification
-│   ├── semantic_claim_evaluation.py   # selective semantic evaluation + merge
-│   └── patterns/                      # six autonomy patterns
+│   ├── benchmark.py                    # benchmark orchestration
+│   ├── grounding.py                    # deterministic grounding
+│   ├── claim_evaluation.py             # deterministic claim classification
+│   ├── semantic_claim_evaluation.py    # selective semantic merge
+│   └── patterns/                       # six autonomy patterns
 ├── adapters/
-│   ├── anthropic.py                   # native Anthropic Messages
-│   ├── openai_responses.py            # native OpenAI Responses
-│   ├── openai_compatible.py           # Groq/OpenRouter/custom Chat Completions
-│   ├── providers.py                   # generator + semantic judge composition
-│   ├── incidents.py                   # bounded incident/evidence fixture
-│   ├── benchmark_artifacts.py
-│   ├── benchmark_metadata.py
-│   └── run_log.py
-├── cli.py                             # run / compare / repeat / benchmark
-└── semantic_judge_cli.py              # generator × judge calibration surface
+│   ├── anthropic.py                    # native Anthropic Messages
+│   ├── openai_responses.py             # native OpenAI Responses
+│   ├── openai_compatible.py            # Groq/OpenRouter/custom
+│   ├── providers.py                    # generator + judge composition
+│   ├── incidents.py                    # bounded incident fixtures
+│   └── benchmark_metadata.py
+├── cli.py
+└── semantic_judge_cli.py
 ```
 
 The project started from [`claude-python-engineering-harness`](https://github.com/brunovicco/claude-python-engineering-harness), but generic scaffold not needed by this case was removed. The deterministic quality runner and architecture validator were retained because they still enforce project behavior.
@@ -209,7 +248,7 @@ The runtime is provider-neutral and currently includes three transport adapters:
 | OpenRouter | `openrouter` | `openrouter/free` | free router |
 | Custom OpenAI-compatible | `custom` | user-defined | provider-dependent |
 
-OpenAI uses `/v1/responses` for both text and tool-use calls. The adapter sets `store=false`; during a bounded agent run it keeps returned Responses output items only in memory so provider reasoning items can be replayed with subsequent function outputs. Provider-specific reasoning state does not enter the domain model or benchmark artifacts.
+Provider-specific reasoning state does not enter the domain model or benchmark artifacts.
 
 See [`docs/PROVIDERS.md`](docs/PROVIDERS.md).
 
@@ -221,17 +260,7 @@ Requirements: Python 3.13/3.14 and `uv`.
 uv sync --frozen --all-groups
 ```
 
-Free-provider example with OpenRouter:
-
-```bash
-export LLM_PROVIDER=openrouter
-export OPENROUTER_API_KEY="..."
-export OPENROUTER_MODEL=openrouter/free
-
-uv run autonomy-lab run augmented --incident INC-001
-```
-
-Or Groq:
+Free-provider example with Groq:
 
 ```bash
 export LLM_PROVIDER=groq
@@ -251,14 +280,6 @@ One pattern:
 uv run autonomy-lab run augmented --incident INC-001
 ```
 
-Grounding:
-
-```bash
-uv run autonomy-lab run agent \
-  --incident INC-001 \
-  --grounding
-```
-
 Grounding + deterministic claims:
 
 ```bash
@@ -266,16 +287,6 @@ uv run autonomy-lab run agent \
   --incident INC-001 \
   --grounding \
   --claims \
-  --json
-```
-
-Grounding + claims + same-model semantic calibration:
-
-```bash
-uv run autonomy-lab run agent \
-  --incident INC-001 \
-  --grounding \
-  --semantic-claims \
   --json
 ```
 
@@ -293,58 +304,31 @@ uv run autonomy-lab repeat agent --incident INC-001 --runs 5
 
 Live runs can consume provider quota or paid tokens.
 
-## Independent semantic judge calibration
+## Reproducible benchmarks
 
-Generator settings use the normal `LLM_*` namespace. The judge can use the independent `SEMANTIC_*` namespace.
-
-Example: OpenAI generator + Groq judge.
-
-```bash
-export LLM_PROVIDER=openai
-export OPENAI_MODEL=gpt-5.6-luna
-export LLM_MAX_TOKENS=4000
-export LLM_TIMEOUT_SECONDS=60
-
-export SEMANTIC_LLM_PROVIDER=groq
-export SEMANTIC_GROQ_MODEL=openai/gpt-oss-20b
-export SEMANTIC_LLM_MAX_TOKENS=600
-export SEMANTIC_LLM_TIMEOUT_SECONDS=30
-
-uv run python -m autonomy_lab.semantic_judge_cli agent \
-  --incident INC-001 \
-  --json
-```
-
-The immediate output exposes non-secret generator/judge identity plus `self_judge`, while semantic calls and tokens remain separate from the generator pattern metrics.
-
-A judge failure does not erase a successful generator run; the calibration command preserves the run and returns exit code `2` for judge configuration, rate-limit, provider, or schema failures.
-
-## Reproducible Benchmark v1
-
-Run repeated cycles across all six patterns and persist metadata-only experiment artifacts:
+Repeated benchmark:
 
 ```bash
 uv run autonomy-lab benchmark \
   --incident INC-001 \
   --runs 5 \
   --run-interval-seconds 30 \
-  --output results/groq-gpt-oss-20b-900
+  --output results/repeated-<provider>
 ```
 
-Each cycle contains all six patterns, but the starting pattern rotates deterministically across cycles. `--run-interval-seconds` pauses only between independent benchmark attempts; it does not serialize calls inside a pattern. There are no hidden retries.
+Multi-incident breadth benchmark:
 
-The benchmark writes:
-
-```text
-results/groq-gpt-oss-20b-900/
-├── runs.jsonl
-├── summary.csv
-└── summary.md
+```bash
+uv run autonomy-lab benchmark \
+  --all-incidents \
+  --runs 1 \
+  --run-interval-seconds 30 \
+  --output results/breadth-<provider>
 ```
+
+Each benchmark rotates pattern order deterministically. There are no hidden retries.
 
 Artifacts contain provider/model/config metadata, execution metrics, deterministic grounding counts, reliability status, and successful trajectories. They intentionally exclude prompts, model answers, evidence bodies, tool arguments/results, claim text, semantic judgement text, and credentials.
-
-The newer claim/semantic layers do **not** reclassify the historical 60-run benchmark dataset. They remain explicit post-run calibration surfaces until broader labelled evaluation is available.
 
 See [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md).
 
@@ -352,18 +336,9 @@ See [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md).
 
 Grounding Evaluation v1 is deterministic and treats the bounded fixture as the source of truth.
 
-It checks:
+It checks semantic versions, timestamps, measurements, supported associations, strong causal language, explicit uncertainty/rejection, and proposed parameters.
 
-- semantic versions;
-- timestamps;
-- measurements, percentages and durations;
-- exact percentage-point deltas derivable from fixture percentages;
-- timestamp-to-measurement associations in supported Markdown table structures;
-- strong causal language without explicit uncertainty or causal rejection;
-- explicit preservation of uncertainty;
-- proposal sections, where new time/measurement values are tracked as proposed parameters rather than observed facts.
-
-It is intentionally **not** a universal hallucination detector. `100%` specific grounding means that the exact factual specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct.
+It is intentionally **not** a universal hallucination detector. `100%` specific grounding means that the factual specifics checked by v1 were supported or derivable; it does not prove that every sentence is correct.
 
 See [`docs/GROUNDING.md`](docs/GROUNDING.md).
 
@@ -403,22 +378,21 @@ The current evidence does **not** establish that:
 - lower latency implies better reasoning;
 - more model calls necessarily improve or harm grounding;
 - `100%` specific grounding means a fully correct answer;
-- `100%` merged semantic support is ground truth;
+- zero detected causal overclaims proves universal causal correctness;
 - agreement between two models proves correctness;
-- results from one incident generalize to other domains or evidence shapes.
+- breadth results from four bounded fixtures generalize to other domains, systems, or evidence shapes.
 
-The current strongest evidence is architectural and methodological: control ownership changes what can vary, deterministic hard signals can remain authoritative, and semantic judgement can be added selectively without silently rewriting benchmark execution metrics.
+The strongest current evidence is architectural and methodological: control ownership changes what can vary, evidence posture changes where causal failures appear, deterministic hard signals can remain authoritative, and semantic judgement can be added selectively without silently rewriting benchmark execution metrics.
 
 ## Next experiments
 
-The next work should improve **generalization and evaluator calibration**, not simply repeat `INC-001` more times:
+The next work should improve evaluator discrimination and external validity rather than silently expanding the current generation:
 
-1. build a static human-labelled claim set covering facts, inferences, actions, unsupported claims, causal negation, causal assertion, association errors, and historical-context traps;
-2. run a deterministic × semantic judge matrix to measure agreement, false upgrades, and false rejections;
-3. add multiple incident fixtures with different true causal structures and inconclusive cases;
-4. add provider-aware cost normalization while preserving raw provider token metadata;
-5. add Anthropic repeated evidence when API credits are available;
-6. consider a real remote evaluator/evidence boundary before introducing A2A/MCP infrastructure.
+1. design a posture-aware epistemic metric that distinguishes appropriate uncertainty from lexical hedging;
+2. add repeated runs to selected breadth cells to measure variance without mixing generations;
+3. add provider-aware cost normalization while preserving raw provider token metadata;
+4. expand incident fixtures only as new frozen experiment generations;
+5. consider a real remote evaluator/evidence boundary before introducing A2A/MCP infrastructure.
 
 ## Quality gate
 
@@ -427,10 +401,6 @@ uv run python scripts/quality_gate.py
 ```
 
 The retained gate checks lock consistency, Ruff lint/format, architecture boundaries, strict MyPy, Pytest/coverage, Bandit, and dependency vulnerabilities.
-
-## Claude Skill
-
-Only the project-specific `.claude/skills/incident-analysis/SKILL.md` is retained. Generic harness agents, hooks, MCP skills, and workflow scaffolding were removed because they are not runtime requirements for this case.
 
 ## Why `a2a-otel-kit` is still not wired in
 
@@ -441,10 +411,14 @@ If a later phase moves the semantic judge, evidence provider, or another agent t
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — runtime architecture and boundaries
-- [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md) — repeated benchmark methodology
-- [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) — repeated OpenAI/Groq live evidence
+- [`docs/BENCHMARKING.md`](docs/BENCHMARKING.md) — benchmark methodology
+- [`docs/FROZEN_THREE_PROVIDER_BENCHMARK.md`](docs/FROZEN_THREE_PROVIDER_BENCHMARK.md) — frozen 90-run repeated benchmark
+- [`docs/MULTI_INCIDENT_FIXTURES.md`](docs/MULTI_INCIDENT_FIXTURES.md) — contrasting incident fixtures
+- [`docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md`](docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md) — breadth experiment design and freeze
+- [`docs/MULTI_INCIDENT_BREADTH_RESULTS.md`](docs/MULTI_INCIDENT_BREADTH_RESULTS.md) — frozen 72-cell breadth analysis
 - [`docs/GROUNDING.md`](docs/GROUNDING.md) — deterministic Grounding v1
 - [`docs/CLAIM_EVALUATION.md`](docs/CLAIM_EVALUATION.md) — deterministic Claim Evaluation v2
+- [`docs/CLAIM_JUDGE_MATRIX.md`](docs/CLAIM_JUDGE_MATRIX.md) — labelled deterministic/judge matrix
 - [`docs/SEMANTIC_CLAIM_EVALUATION.md`](docs/SEMANTIC_CLAIM_EVALUATION.md) — selective semantic escalation v2.1
 - [`docs/SEMANTIC_JUDGE_DECOUPLING.md`](docs/SEMANTIC_JUDGE_DECOUPLING.md) — independent judge v2.2
 - [`docs/PROVIDERS.md`](docs/PROVIDERS.md) — provider configuration and references
