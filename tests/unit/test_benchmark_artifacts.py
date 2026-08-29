@@ -98,6 +98,10 @@ def _summary() -> PatternBenchmarkSummary:
     )
 
 
+def _markdown_row(*cells: str) -> str:
+    return " | ".join(("", *cells, ""))
+
+
 def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
     artifacts = write_benchmark_artifacts(
         output_dir=tmp_path,
@@ -205,9 +209,23 @@ def test_partial_summary_surfaces_rate_limit_context(tmp_path: Path) -> None:
     assert "Benchmark status: `partial`" in markdown
     assert "Rate limits occurred in this experiment." in markdown
     assert "increase the attempt interval" in markdown
-    expected_row = (
-        "| agent | 0/1 | - | - | - | - | - | - | 0 | 0 | 0 | 0 | "
-        "100.0% | 0.0% | 0.0% | 0 |"
+    expected_row = _markdown_row(
+        "agent",
+        "0/1",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0",
+        "0",
+        "0",
+        "0",
+        "100.0%",
+        "0.0%",
+        "0.0%",
+        "0",
     )
     assert expected_row in markdown
 
@@ -273,9 +291,23 @@ def test_partial_summary_surfaces_provider_error_context(tmp_path: Path) -> None
     assert "Benchmark status: `partial`" in markdown
     assert "Provider errors occurred in this experiment." in markdown
     assert "raw provider response bodies are not persisted" in markdown
-    expected_row = (
-        "| agent | 0/1 | - | - | - | - | - | - | 0 | 0 | 0 | 0 | "
-        "0.0% | 100.0% | 0.0% | 0 |"
+    expected_row = _markdown_row(
+        "agent",
+        "0/1",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0.0%",
+        "100.0%",
+        "0.0%",
+        "0",
     )
     assert expected_row in markdown
 
