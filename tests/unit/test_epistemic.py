@@ -3,16 +3,21 @@ from autonomy_lab.application.epistemic import (
     DeterministicEpistemicEvaluator,
     infer_evidence_posture,
 )
-from autonomy_lab.domain.epistemic import EpistemicVerdict, EvidencePosture
+from autonomy_lab.domain.autonomy import EvidenceItem, Incident
+from autonomy_lab.domain.epistemic import (
+    EpistemicReport,
+    EpistemicVerdict,
+    EvidencePosture,
+)
 
 
-def _fixture(incident_id: str):
+def _fixture(incident_id: str) -> tuple[Incident, tuple[EvidenceItem, ...]]:
     store = InMemoryIncidentStore()
     incident = store.get_incident(incident_id)
     return incident, store.get_evidence(incident)
 
 
-def _evaluate(incident_id: str, answer: str):
+def _evaluate(incident_id: str, answer: str) -> EpistemicReport:
     incident, evidence = _fixture(incident_id)
     return DeterministicEpistemicEvaluator().evaluate(
         answer=answer,
