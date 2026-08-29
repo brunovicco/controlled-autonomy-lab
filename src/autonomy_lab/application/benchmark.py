@@ -162,9 +162,7 @@ def run_benchmark(
                         epistemic.causal_assertion_detected if epistemic is not None else None
                     ),
                     hedged_causal_language_detected=(
-                        epistemic.hedged_causal_language_detected
-                        if epistemic is not None
-                        else None
+                        epistemic.hedged_causal_language_detected if epistemic is not None else None
                     ),
                     abstention_detected=(
                         epistemic.abstention_detected if epistemic is not None else None
@@ -288,9 +286,7 @@ def summarize_benchmark(
                 epistemic_evaluated=epistemic_evaluated,
                 epistemic_aligned=epistemic_aligned,
                 epistemic_alignment_rate=(
-                    _rate(epistemic_aligned, epistemic_evaluated)
-                    if epistemic_evaluated
-                    else None
+                    _rate(epistemic_aligned, epistemic_evaluated) if epistemic_evaluated else None
                 ),
                 epistemic_overclaimed=_epistemic_verdict_count(
                     completed, EpistemicVerdict.OVERCLAIMED
