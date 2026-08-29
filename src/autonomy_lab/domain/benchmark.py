@@ -35,6 +35,7 @@ class BenchmarkConfig:
     run_interval_seconds: float
     git_commit: str
     reasoning_effort: str | None = None
+    epistemic_evaluation_version: str | None = None
 
     def __post_init__(self) -> None:
         """Reject invalid benchmark settings before any provider calls."""
@@ -64,6 +65,7 @@ class BenchmarkRecord:
     pattern: AutonomyPattern
     run_number: int
     status: BenchmarkStatus
+    epistemic_evaluation_version: str | None = None
     model_calls: int | None = None
     tool_calls: int | None = None
     input_tokens: int | None = None
