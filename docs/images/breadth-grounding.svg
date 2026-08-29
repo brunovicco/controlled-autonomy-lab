@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" role="img" aria-labelledby="title desc">
+<title id="title">Specific grounding by architecture</title>
+<desc id="desc">Horizontal bars showing mean specific grounding on successful breadth cells only.</desc>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;fill:#24292f}.title{font-size:26px;font-weight:700}.sub{font-size:15px;fill:#57606a}.label{font-size:16px;font-weight:600}.value{font-size:15px;font-weight:700}.tick{font-size:12px;fill:#6e7781}.foot{font-size:13px;fill:#57606a}</style>
+<text x="40" y="42" class="title">Specific grounding by architecture</text>
+<text x="40" y="68" class="sub">Mean grounding over status=ok breadth cells only; higher means more checked specifics were supported or derivable.</text>
+<line x1="250.0" y1="96" x2="250.0" y2="430" stroke="#d0d7de" stroke-width="1"/>
+<text x="250.0" y="92" text-anchor="middle" class="tick">0%</text>
+<line x1="412.5" y1="96" x2="412.5" y2="430" stroke="#d0d7de" stroke-width="1"/>
+<text x="412.5" y="92" text-anchor="middle" class="tick">25%</text>
+<line x1="575.0" y1="96" x2="575.0" y2="430" stroke="#d0d7de" stroke-width="1"/>
+<text x="575.0" y="92" text-anchor="middle" class="tick">50%</text>
+<line x1="737.5" y1="96" x2="737.5" y2="430" stroke="#d0d7de" stroke-width="1"/>
+<text x="737.5" y="92" text-anchor="middle" class="tick">75%</text>
+<line x1="900.0" y1="96" x2="900.0" y2="430" stroke="#d0d7de" stroke-width="1"/>
+<text x="900.0" y="92" text-anchor="middle" class="tick">100%</text>
+<text x="232" y="139" text-anchor="end" class="label">Augmented</text>
+<rect x="250" y="120" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="120" width="635.4" height="26" rx="5" fill="#0969da"/>
+<text x="895.4" y="139" class="value">97.8%</text>
+<text x="232" y="195" text-anchor="end" class="label">Chaining</text>
+<rect x="250" y="176" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="176" width="483.7" height="26" rx="5" fill="#0969da"/>
+<text x="743.7" y="195" class="value">74.4%</text>
+<text x="232" y="251" text-anchor="end" class="label">Routing</text>
+<rect x="250" y="232" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="232" width="603.1" height="26" rx="5" fill="#0969da"/>
+<text x="863.1" y="251" class="value">92.8%</text>
+<text x="232" y="307" text-anchor="end" class="label">Parallel</text>
+<rect x="250" y="288" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="288" width="616.5" height="26" rx="5" fill="#0969da"/>
+<text x="876.5" y="307" class="value">94.8%</text>
+<text x="232" y="363" text-anchor="end" class="label">Evaluator-optimizer</text>
+<rect x="250" y="344" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="344" width="634.3" height="26" rx="5" fill="#0969da"/>
+<text x="894.3" y="363" class="value">97.6%</text>
+<text x="232" y="419" text-anchor="end" class="label">Agent</text>
+<rect x="250" y="400" width="650" height="26" rx="5" fill="#f0f3f6"/>
+<rect x="250" y="400" width="619.9" height="26" rx="5" fill="#0969da"/>
+<text x="879.9" y="419" class="value">95.4%</text>
+<text x="40" y="474" class="foot">Source: results/breadth-main/analysis/architecture-summary.csv</text>
+<text x="40" y="492" class="foot">Specific grounding is a bounded benchmark metric; it does not mean complete semantic correctness.</text>
+</svg>
