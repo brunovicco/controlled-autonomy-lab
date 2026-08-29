@@ -10,7 +10,6 @@ from typing import Any
 from autonomy_lab.domain.benchmark import (
     BENCHMARK_RECORD_SCHEMA_VERSION,
     BENCHMARK_SUMMARY_SCHEMA_VERSION,
-    EPISTEMIC_EVALUATION_VERSION,
     GROUNDING_EVALUATION_VERSION,
     BenchmarkConfig,
     BenchmarkRecord,
@@ -88,7 +87,7 @@ def _record_payload(record: BenchmarkRecord) -> dict[str, Any]:
     return {
         "schema_version": BENCHMARK_RECORD_SCHEMA_VERSION,
         "grounding_evaluation_version": GROUNDING_EVALUATION_VERSION,
-        "epistemic_evaluation_version": EPISTEMIC_EVALUATION_VERSION,
+        "epistemic_evaluation_version": record.epistemic_evaluation_version,
         "timestamp_utc": record.timestamp_utc,
         "git_commit": record.git_commit,
         "provider": record.provider,
@@ -188,7 +187,7 @@ def _summary_csv(
             {
                 "schema_version": BENCHMARK_SUMMARY_SCHEMA_VERSION,
                 "grounding_evaluation_version": GROUNDING_EVALUATION_VERSION,
-                "epistemic_evaluation_version": EPISTEMIC_EVALUATION_VERSION,
+                "epistemic_evaluation_version": config.epistemic_evaluation_version or "",
                 "git_commit": config.git_commit,
                 "provider": config.provider,
                 "model": config.model,
@@ -244,12 +243,13 @@ def _summary_markdown(
     provider_errors = any(record.status is BenchmarkStatus.PROVIDER_ERROR for record in records)
     bound_exceeded = any(record.status is BenchmarkStatus.BOUND_EXCEEDED for record in records)
     reasoning = config.reasoning_effort or "default/provider-defined"
+    epistemic = config.epistemic_evaluation_version or "not-run"
     lines = [
         "# Reproducible Benchmark Summary",
         "",
         f"- Summary schema: `{BENCHMARK_SUMMARY_SCHEMA_VERSION}`",
         f"- Grounding evaluator: `{GROUNDING_EVALUATION_VERSION}`",
-        f"- Epistemic evaluator: `{EPISTEMIC_EVALUATION_VERSION}`",
+        f"- Epistemic evaluator: `{epistemic}`",
         f"- Git commit: `{config.git_commit}`",
         f"- Provider: `{config.provider}`",
         f"- Model: `{config.model}`",
@@ -266,13 +266,18 @@ def _summary_markdown(
             "calls inside a pattern; parallel fan-out remains concurrent and multi-call "
             "patterns retain their original behavior."
         ),
-        "",
-        (
-            "Epistemic aggregates are computed only from successful cells carrying an "
-            "`epistemic-v4.1` verdict. Provider failures and bounded-agent exhaustion are "
-            "availability/runtime evidence, not quality zeros."
-        ),
     ]
+    if config.epistemic_evaluation_version is not None:
+        lines.extend(
+            [
+                "",
+                (
+                    "Epistemic aggregates are computed only from successful cells carrying the "
+                    "configured epistemic verdict. Provider failures and bounded-agent exhaustion "
+                    "are availability/runtime evidence, not quality zeros."
+                ),
+            ]
+        )
     if rate_limited:
         lines.extend(
             [
