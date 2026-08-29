@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from autonomy_lab.application.benchmark import run_benchmark, summarize_benchmark
 from autonomy_lab.application.model_errors import ModelRateLimitError
+from autonomy_lab.application.patterns.agent import AgentLimitError
 from autonomy_lab.domain.autonomy import AutonomyPattern, ModelUsage, PatternRun
 from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkStatus
 from autonomy_lab.domain.grounding import GroundingReport
@@ -98,6 +99,41 @@ def test_benchmark_records_rate_limit_without_retrying() -> None:
     assert records[1].status is BenchmarkStatus.RATE_LIMITED
     assert records[1].retry_after == "2"
     assert records[1].model_calls is None
+
+
+def test_benchmark_records_agent_bound_and_continues_without_retrying() -> None:
+    attempts: list[AutonomyPattern] = []
+
+    def execute(pattern: AutonomyPattern) -> PatternRun:
+        attempts.append(pattern)
+        if pattern is AutonomyPattern.AGENT:
+            raise AgentLimitError(
+                "agent exceeded max_steps=6",
+                model_calls=6,
+                tool_calls=5,
+                usage=ModelUsage(input_tokens=120, output_tokens=30),
+                latency_ms=42.0,
+                steps=("get_service_metrics", "get_dependencies"),
+            )
+        return _run(pattern)
+
+    records = run_benchmark(
+        config=_config(runs=1, interval=0),
+        patterns=(AutonomyPattern.AGENT, AutonomyPattern.AUGMENTED),
+        run_pattern=execute,
+        evaluate_run=_grounding,
+    )
+
+    assert attempts == [AutonomyPattern.AGENT, AutonomyPattern.AUGMENTED]
+    assert records[0].status is BenchmarkStatus.BOUND_EXCEEDED
+    assert records[0].model_calls == 6
+    assert records[0].tool_calls == 5
+    assert records[0].input_tokens == 120
+    assert records[0].output_tokens == 30
+    assert records[0].latency_ms == 42.0
+    assert records[0].trajectory == ("get_service_metrics", "get_dependencies")
+    assert records[0].error == "agent exceeded max_steps=6"
+    assert records[1].status is BenchmarkStatus.OK
 
 
 def test_benchmark_summary_uses_completed_runs_only() -> None:

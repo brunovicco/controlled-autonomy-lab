@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from statistics import fmean, median
 
 from autonomy_lab.application.model_errors import ModelProviderError, ModelRateLimitError
+from autonomy_lab.application.patterns.agent import AgentLimitError
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 from autonomy_lab.domain.benchmark import (
     BenchmarkConfig,
@@ -85,6 +86,17 @@ def run_benchmark(
                     )
                 )
                 continue
+            except AgentLimitError as exc:
+                records.append(
+                    _bound_exceeded_record(
+                        config=config,
+                        timestamp=timestamp,
+                        pattern=pattern,
+                        run_number=run_number,
+                        error=exc,
+                    )
+                )
+                continue
 
             if on_success is not None:
                 on_success(run)
@@ -144,6 +156,37 @@ def _failure_record(
         run_number=run_number,
         status=status,
         retry_after=retry_after,
+        error=str(error),
+    )
+
+
+def _bound_exceeded_record(
+    *,
+    config: BenchmarkConfig,
+    timestamp: str,
+    pattern: AutonomyPattern,
+    run_number: int,
+    error: AgentLimitError,
+) -> BenchmarkRecord:
+    return BenchmarkRecord(
+        timestamp_utc=timestamp,
+        git_commit=config.git_commit,
+        provider=config.provider,
+        model=config.model,
+        max_tokens=config.max_tokens,
+        timeout_seconds=config.timeout_seconds,
+        reasoning_effort=config.reasoning_effort,
+        run_interval_seconds=config.run_interval_seconds,
+        incident_id=config.incident_id,
+        pattern=pattern,
+        run_number=run_number,
+        status=BenchmarkStatus.BOUND_EXCEEDED,
+        model_calls=error.model_calls,
+        tool_calls=error.tool_calls,
+        input_tokens=error.usage.input_tokens,
+        output_tokens=error.usage.output_tokens,
+        latency_ms=error.latency_ms,
+        trajectory=error.steps,
         error=str(error),
     )
 

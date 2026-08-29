@@ -96,5 +96,12 @@ def test_agent_stops_when_step_budget_is_exhausted() -> None:
         ]
     )
 
-    with pytest.raises(AgentLimitError, match="max_steps=2"):
+    with pytest.raises(AgentLimitError, match="max_steps=2") as exc_info:
         BoundedIncidentAgent(store=InMemoryIncidentStore(), model=model, max_steps=2).run("INC-001")
+
+    error = exc_info.value
+    assert error.model_calls == 2
+    assert error.tool_calls == 2
+    assert error.usage == ModelUsage(20, 4)
+    assert error.steps == ("get_service_metrics", "get_dependencies")
+    assert error.latency_ms >= 0
