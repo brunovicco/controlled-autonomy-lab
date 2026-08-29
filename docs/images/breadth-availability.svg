@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" viewBox="0 0 1000 420" role="img" aria-labelledby="title desc">
+<title id="title">Provider availability by incident</title>
+<desc id="desc">Matrix showing completion rate by provider and incident in the frozen breadth generation.</desc>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;fill:#24292f}.title{font-size:26px;font-weight:700}.sub{font-size:15px;fill:#57606a}.head{font-size:15px;font-weight:700}.label{font-size:16px;font-weight:600}.value{font-size:18px;font-weight:700}.small{font-size:12px;fill:#57606a}.foot{font-size:13px;fill:#57606a}</style>
+<text x="40" y="42" class="title">Provider availability by incident</text>
+<text x="40" y="68" class="sub">Completion rate for the six architecture attempts in each provider × incident block.</text>
+<text x="280" y="86" text-anchor="middle" class="head">INC-001</text>
+<text x="460" y="86" text-anchor="middle" class="head">INC-002</text>
+<text x="640" y="86" text-anchor="middle" class="head">INC-003</text>
+<text x="820" y="86" text-anchor="middle" class="head">INC-004</text>
+<text x="168" y="151" text-anchor="end" class="label">OpenAI</text>
+<rect x="198" y="118" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="280" y="149" text-anchor="middle" class="value">100%</text>
+<rect x="378" y="118" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="460" y="149" text-anchor="middle" class="value">100%</text>
+<rect x="558" y="118" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="640" y="149" text-anchor="middle" class="value">100%</text>
+<rect x="738" y="118" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="820" y="149" text-anchor="middle" class="value">100%</text>
+<text x="168" y="221" text-anchor="end" class="label">Groq</text>
+<rect x="198" y="188" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="280" y="219" text-anchor="middle" class="value">100%</text>
+<rect x="378" y="188" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="460" y="219" text-anchor="middle" class="value">100%</text>
+<rect x="558" y="188" width="164" height="54" rx="8" fill="#ffebe9" stroke="#cf222e" stroke-width="1.5"/><text x="640" y="219" text-anchor="middle" class="value">0%</text><text x="640" y="236" text-anchor="middle" class="small">rate limited</text>
+<rect x="738" y="188" width="164" height="54" rx="8" fill="#ffebe9" stroke="#cf222e" stroke-width="1.5"/><text x="820" y="219" text-anchor="middle" class="value">0%</text><text x="820" y="236" text-anchor="middle" class="small">rate limited</text>
+<text x="168" y="291" text-anchor="end" class="label">Anthropic</text>
+<rect x="198" y="258" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="280" y="289" text-anchor="middle" class="value">100%</text>
+<rect x="378" y="258" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="460" y="289" text-anchor="middle" class="value">100%</text>
+<rect x="558" y="258" width="164" height="54" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/><text x="640" y="289" text-anchor="middle" class="value">83.3%</text><text x="640" y="306" text-anchor="middle" class="small">1 provider error</text>
+<rect x="738" y="258" width="164" height="54" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text x="820" y="289" text-anchor="middle" class="value">100%</text>
+<text x="40" y="364" class="foot">Source: results/breadth-main/analysis/availability-by-provider-incident.csv</text>
+<text x="40" y="382" class="foot">Availability is reported separately from quality; unavailable cells are not assigned quality zeros.</text>
+</svg>
