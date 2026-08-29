@@ -107,7 +107,10 @@ def test_epistemic_breadth_runner_writes_new_generation_schema(
             .splitlines()
         ]
         assert len(records) == len(AutonomyPattern)
-        assert all(record["schema_version"] == BENCHMARK_RECORD_SCHEMA_VERSION for record in records)
+        assert all(
+            record["schema_version"] == BENCHMARK_RECORD_SCHEMA_VERSION
+            for record in records
+        )
         assert all(
             record["epistemic_evaluation_version"] == EPISTEMIC_EVALUATION_VERSION
             for record in records
