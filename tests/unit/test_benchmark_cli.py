@@ -129,3 +129,84 @@ def test_benchmark_command_persists_partial_results_and_returns_two(
     assert chaining["retry_after"] == "3"
     assert agent["status"] == "ok"
     assert "Benchmark status: `partial`" in (output / "summary.md").read_text(encoding="utf-8")
+
+
+def test_benchmark_all_incidents_writes_breadth_manifest_and_four_artifact_sets(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_benchmark_dependencies(monkeypatch)
+    output = tmp_path / "breadth"
+
+    exit_code = cli.main(
+        [
+            "benchmark",
+            "--all-incidents",
+            "--runs",
+            "1",
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert "breadth benchmark: complete" in capsys.readouterr().out
+    manifest = json.loads((output / "breadth-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "breadth-v1"
+    assert manifest["incidents"] == ["INC-001", "INC-002", "INC-003", "INC-004"]
+    assert manifest["attempted"] == 24
+    assert manifest["completed"] == 24
+    assert manifest["status"] == "complete"
+    assert len(manifest["aggregate_by_pattern"]) == len(AutonomyPattern)
+
+    expected_first_pattern = {
+        "INC-001": "augmented",
+        "INC-002": "chaining",
+        "INC-003": "routing",
+        "INC-004": "parallel",
+    }
+    for incident_id in manifest["incidents"]:
+        records = [
+            json.loads(line)
+            for line in (output / incident_id / "runs.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        assert len(records) == len(AutonomyPattern)
+        assert records[0]["pattern"] == expected_first_pattern[incident_id]
+        assert all(record["incident_id"] == incident_id for record in records)
+        assert all(record["status"] == "ok" for record in records)
+        assert all("answer" not in record for record in records)
+
+
+def test_benchmark_all_incidents_preflights_every_output_before_pattern_calls(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_benchmark_dependencies(monkeypatch)
+    output = tmp_path / "breadth"
+    blocked = output / "INC-003"
+    blocked.mkdir(parents=True)
+    (blocked / "summary.md").write_text("existing", encoding="utf-8")
+    pattern_calls = 0
+
+    def build_runner(
+        pattern: AutonomyPattern,
+        *,
+        store: object,
+        model: object,
+    ) -> StaticRunner:
+        nonlocal pattern_calls
+        del store, model
+        pattern_calls += 1
+        return StaticRunner(pattern)
+
+    monkeypatch.setattr(cli, "_build_runner", build_runner)
+
+    exit_code = cli.main(["benchmark", "--all-incidents", "--runs", "1", "--output", str(output)])
+
+    assert exit_code == 2
+    assert pattern_calls == 0
+    assert "benchmark output already exists" in capsys.readouterr().err
