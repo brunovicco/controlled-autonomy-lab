@@ -99,7 +99,7 @@ def _summary() -> PatternBenchmarkSummary:
 
 
 def _markdown_row(*cells: str) -> str:
-    return " | ".join(("", *cells, ""))
+    return f"| {' | '.join(cells)} |"
 
 
 def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
