@@ -1,0 +1,144 @@
+{
+  "aggregate_by_pattern": [
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.25,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 1.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 946.5,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 7380.5225624964805,
+      "pattern": "augmented",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.25,
+      "mean_grounding_ratio": 0.8041666666666667,
+      "mean_model_calls": 3.0,
+      "mean_proposed": 0.25,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 4015.75,
+      "mean_unsupported": 1.0,
+      "p50_latency_ms": 26039.99772899624,
+      "pattern": "chaining",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 993.25,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 5520.996687497245,
+      "pattern": "routing",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 3
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.75,
+      "mean_grounding_ratio": 0.9821428571428572,
+      "mean_model_calls": 4.0,
+      "mean_proposed": 0.25,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 5172.25,
+      "mean_unsupported": 0.25,
+      "p50_latency_ms": 20596.844854000665,
+      "pattern": "parallel",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.5,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 1628.0,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 8012.02899999771,
+      "pattern": "evaluator-optimizer",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 5.0,
+      "mean_total_tokens": 1671.0,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 6423.410479001177,
+      "pattern": "agent",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    }
+  ],
+  "artifacts": {
+    "INC-001": {
+      "runs_jsonl": "results/breadth-openai/INC-001/runs.jsonl",
+      "summary_csv": "results/breadth-openai/INC-001/summary.csv",
+      "summary_markdown": "results/breadth-openai/INC-001/summary.md"
+    },
+    "INC-002": {
+      "runs_jsonl": "results/breadth-openai/INC-002/runs.jsonl",
+      "summary_csv": "results/breadth-openai/INC-002/summary.csv",
+      "summary_markdown": "results/breadth-openai/INC-002/summary.md"
+    },
+    "INC-003": {
+      "runs_jsonl": "results/breadth-openai/INC-003/runs.jsonl",
+      "summary_csv": "results/breadth-openai/INC-003/summary.csv",
+      "summary_markdown": "results/breadth-openai/INC-003/summary.md"
+    },
+    "INC-004": {
+      "runs_jsonl": "results/breadth-openai/INC-004/runs.jsonl",
+      "summary_csv": "results/breadth-openai/INC-004/summary.csv",
+      "summary_markdown": "results/breadth-openai/INC-004/summary.md"
+    }
+  },
+  "attempted": 24,
+  "completed": 24,
+  "git_commit": "bc75739c3eb2949f5f8925cc000ea64af320574d",
+  "incidents": [
+    "INC-001",
+    "INC-002",
+    "INC-003",
+    "INC-004"
+  ],
+  "max_tokens": 4000,
+  "model": "gpt-5.6-luna",
+  "patterns": [
+    "augmented",
+    "chaining",
+    "routing",
+    "parallel",
+    "evaluator-optimizer",
+    "agent"
+  ],
+  "provider": "openai",
+  "provider_errors": 0,
+  "rate_limited": 0,
+  "reasoning_effort": "default/provider-defined",
+  "run_interval_seconds": 2.0,
+  "runs_per_incident_pattern": 1,
+  "schema_version": "breadth-v1",
+  "status": "complete",
+  "timeout_seconds": 60.0
+}

@@ -1,0 +1,25 @@
+incident,incident_semantics,pattern,providers_observed,causal_overclaims,zero_overclaim_rate,mean_grounding
+INC-001,uncertain / correlation only,augmented,3,2,0.3333333333333333,0.9487333333333333
+INC-001,uncertain / correlation only,chaining,3,1,0.6666666666666666,0.7639
+INC-001,uncertain / correlation only,routing,3,2,0.3333333333333333,0.9007999999999999
+INC-001,uncertain / correlation only,parallel,3,3,0.6666666666666666,0.9444333333333333
+INC-001,uncertain / correlation only,evaluator-optimizer,3,2,0.6666666666666666,0.9394
+INC-001,uncertain / correlation only,agent,3,0,1.0,0.9209666666666667
+INC-002,confirmed deployment cause,augmented,3,0,1.0,0.9762
+INC-002,confirmed deployment cause,chaining,3,0,1.0,0.7139000000000001
+INC-002,confirmed deployment cause,routing,3,0,1.0,0.9004666666666666
+INC-002,confirmed deployment cause,parallel,3,1,0.6666666666666666,0.9743666666666666
+INC-002,confirmed deployment cause,evaluator-optimizer,3,0,1.0,0.9804
+INC-002,confirmed deployment cause,agent,3,0,1.0,0.9804
+INC-003,confirmed dependency cause,augmented,2,1,0.5,1.0
+INC-003,confirmed dependency cause,chaining,1,0,1.0,0.75
+INC-003,confirmed dependency cause,routing,2,0,1.0,0.9375
+INC-003,confirmed dependency cause,parallel,2,2,0.5,0.8643000000000001
+INC-003,confirmed dependency cause,evaluator-optimizer,2,1,0.5,1.0
+INC-003,confirmed dependency cause,agent,2,0,1.0,0.91665
+INC-004,inconclusive / abstention expected,augmented,2,0,1.0,1.0
+INC-004,inconclusive / abstention expected,chaining,2,4,0.0,0.75715
+INC-004,inconclusive / abstention expected,routing,2,0,1.0,1.0
+INC-004,inconclusive / abstention expected,parallel,2,1,0.5,1.0
+INC-004,inconclusive / abstention expected,evaluator-optimizer,2,1,0.5,1.0
+INC-004,inconclusive / abstention expected,agent,2,0,1.0,1.0

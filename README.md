@@ -130,7 +130,8 @@ The result is **not** “agents win.” It supports the narrower hypothesis that
 See:
 
 - [`docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md`](docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md) for experiment design and frozen execution boundaries;
-- [`docs/MULTI_INCIDENT_BREADTH_RESULTS.md`](docs/MULTI_INCIDENT_BREADTH_RESULTS.md) for the full frozen analysis, threats to validity, and explicit non-claims.
+- [`docs/MULTI_INCIDENT_BREADTH_RESULTS.md`](docs/MULTI_INCIDENT_BREADTH_RESULTS.md) for the full frozen analysis, threats to validity, and explicit non-claims;
+- [`results/breadth-main/`](results/breadth-main/) for the curated metadata-only evidence pack and SHA-256 checksums.
 
 ### Claim-level calibration
 

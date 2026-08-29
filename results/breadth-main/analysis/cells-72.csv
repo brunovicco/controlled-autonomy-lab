@@ -1,0 +1,73 @@
+bundle,provider,model,max_tokens,timeout_seconds,reasoning_effort,git_commit,incident_id,pattern,run_number,status,model_calls,tool_calls,input_tokens,output_tokens,total_tokens,latency_ms,unsupported_count,proposed_count,causality_overclaims,grounding_ratio,uncertainty_language_detected,trajectory,retry_after,error
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,augmented,1,ok,1,0,286,585,871,7313.038,0,0,1,1.0,True,load-evidence -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,chaining,1,ok,3,0,1596,2252,3848,26339.3,0,0,0,1.0,True,extract-facts -> assess -> recommend,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,routing,1,ok,2,0,458,371,829,5465.18,0,0,0,1.0,True,classify -> route:deployment -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,parallel,1,ok,4,0,2367,3248,5615,20246.595,0,0,3,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,evaluator-optimizer,1,ok,2,0,894,666,1560,10150.39,0,0,0,1.0,True,generate -> evaluate:1 -> quality-pass,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,agent,1,ok,2,5,980,719,1699,6829.894,0,0,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,chaining,1,ok,3,0,1750,2412,4162,26923.23,2,0,0,0.6667,True,extract-facts -> assess -> recommend,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,routing,1,ok,2,0,622,392,1014,5384.232,0,0,0,1.0,True,classify -> route:deployment -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,parallel,1,ok,4,0,2135,2357,4492,16049.958,0,0,0,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,evaluator-optimizer,1,ok,2,0,1011,628,1639,7382.13,0,0,0,1.0,True,generate -> evaluate:1 -> quality-pass,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,agent,1,ok,2,5,1067,562,1629,6016.927,0,0,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,augmented,1,ok,1,0,368,580,948,7448.007,0,0,0,1.0,True,load-evidence -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,routing,1,ok,2,0,531,348,879,5576.814,0,0,0,1.0,True,classify -> route:dependency -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,parallel,1,ok,4,0,1989,2505,4494,20947.095,1,1,0,0.9286,True,fan-out:3 -> fan-in -> aggregate,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,evaluator-optimizer,1,ok,2,0,928,679,1607,7920.15,0,0,1,1.0,True,generate -> evaluate:1 -> quality-pass,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,agent,1,ok,2,5,1012,551,1563,5881.722,0,0,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,augmented,1,ok,1,0,323,601,924,7105.946,0,0,0,1.0,True,load-evidence -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,chaining,1,ok,3,0,1437,2058,3495,22061.887,1,0,0,0.75,True,extract-facts -> assess -> recommend,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,parallel,1,ok,4,0,2663,3425,6088,22674.372,0,0,0,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,evaluator-optimizer,1,ok,2,0,1070,636,1706,8103.908,0,0,1,1.0,True,generate -> evaluate:1 -> quality-pass,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,agent,1,ok,2,5,1046,747,1793,7226.011,0,0,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,augmented,1,ok,1,0,346,697,1043,7933.11,0,0,0,1.0,True,load-evidence -> model-analysis,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,chaining,1,ok,3,0,1777,2781,4558,25740.695,1,1,1,0.8,True,extract-facts -> assess -> recommend,,
+openai,openai,gpt-5.6-luna,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,routing,1,ok,2,0,582,669,1251,8726.037,0,0,0,1.0,True,classify -> route:performance -> model-analysis,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,augmented,1,ok,1,0,350,900,1250,1957.463,2,0,0,0.8462,True,load-evidence -> model-analysis,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,chaining,1,ok,3,0,1859,2335,4194,3810.691,3,5,0,0.625,True,extract-facts -> assess -> recommend,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,routing,1,ok,2,0,585,1303,1888,2171.348,3,0,1,0.7857,True,classify -> route:dependency -> model-analysis,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,parallel,1,ok,4,0,2421,3600,6021,3095.416,0,0,0,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,evaluator-optimizer,1,ok,2,0,1140,1320,2460,2181.627,2,0,0,0.8182,True,generate -> evaluate:1 -> quality-pass,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,agent,1,ok,5,4,2804,1338,4142,3240.335,1,1,0,0.9167,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> get_previous_incidents -> final-answer,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,chaining,1,ok,3,0,2067,2582,4649,4489.522,2,0,0,0.6,True,extract-facts -> assess -> recommend,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,routing,1,ok,2,0,750,962,1712,2063.21,3,2,0,0.8125,True,classify -> route:deployment -> model-analysis,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,parallel,1,ok,4,0,2649,3336,5985,2650.16,1,0,1,0.9231,True,fan-out:3 -> fan-in -> aggregate,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,evaluator-optimizer,1,ok,2,0,1295,1142,2437,2428.903,1,0,0,0.9412,True,generate -> evaluate:1 -> quality-pass,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,agent,1,ok,4,3,2325,967,3292,2821.097,1,0,0,0.9412,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> final-answer,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,augmented,1,ok,1,0,432,653,1085,1122.868,1,0,0,0.9286,True,load-evidence -> model-analysis,,
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,routing,1,rate_limited,,,,,,,,,,,,,147,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,parallel,1,rate_limited,,,,,,,,,,,,,114,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,evaluator-optimizer,1,rate_limited,,,,,,,,,,,,,87,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,agent,1,rate_limited,,,,,,,,,,,,,102,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,augmented,1,rate_limited,,,,,,,,,,,,,51,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,chaining,1,rate_limited,,,,,,,,,,,,,533,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,parallel,1,rate_limited,,,,,,,,,,,,,501,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,evaluator-optimizer,1,rate_limited,,,,,,,,,,,,,475,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,agent,1,rate_limited,,,,,,,,,,,,,480,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,augmented,1,rate_limited,,,,,,,,,,,,,439,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,chaining,1,rate_limited,,,,,,,,,,,,,382,Groq API returned HTTP 429
+groq,groq,openai/gpt-oss-20b,900,30.0,medium,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,routing,1,rate_limited,,,,,,,,,,,,,353,Groq API returned HTTP 429
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,augmented,1,ok,1,0,447,1350,1797,17171.276,0,0,1,1.0,True,load-evidence -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,chaining,1,ok,3,0,2711,3520,6231,40577.782,1,0,1,0.6667,True,extract-facts -> assess -> recommend,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,routing,1,ok,2,0,694,1168,1862,15100.747,1,0,1,0.9167,True,classify -> route:deployment -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,parallel,1,ok,4,0,4146,5001,9147,37284.461,2,0,0,0.8333,True,fan-out:3 -> fan-in -> aggregate,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,evaluator-optimizer,1,ok,2,0,1694,1515,3209,17029.067,0,0,2,1.0,True,generate -> evaluate:1 -> quality-pass,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-001,agent,1,ok,2,5,2872,1531,4403,17790.624,2,0,0,0.8462,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,chaining,1,ok,3,0,2682,2896,5578,32112.184,1,0,0,0.875,True,extract-facts -> assess -> recommend,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,routing,1,ok,2,0,918,1125,2043,13343.532,2,0,0,0.8889,True,classify -> route:deployment -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,parallel,1,ok,4,0,4208,5917,10125,44367.402,0,1,0,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,evaluator-optimizer,1,ok,4,0,4997,3402,8399,36347.568,0,1,0,1.0,True,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,agent,1,ok,2,5,2955,1382,4337,16766.507,0,2,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-002,augmented,1,ok,1,0,559,995,1554,11668.196,0,0,0,1.0,True,load-evidence -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,routing,1,ok,2,0,803,1126,1929,13232.86,2,0,0,0.875,True,classify -> route:dependency -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,parallel,1,ok,4,0,3915,5617,9532,43248.0,2,0,2,0.8,True,fan-out:3 -> fan-in -> aggregate,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,evaluator-optimizer,1,ok,4,0,4893,3445,8338,37282.906,0,0,0,1.0,True,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,agent,1,ok,2,5,2890,1331,4221,16925.235,2,0,0,0.8333,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,augmented,1,ok,1,0,499,1057,1556,11397.496,0,0,1,1.0,True,load-evidence -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-003,chaining,1,provider_error,,,,,,,,,,,,,,Anthropic request failed
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,parallel,1,ok,4,0,4336,5575,9911,38895.128,0,1,1,1.0,True,fan-out:3 -> fan-in -> aggregate,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,evaluator-optimizer,1,ok,2,0,1793,1120,2913,12824.192,0,0,0,1.0,True,generate -> evaluate:1 -> quality-pass,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,agent,1,ok,2,5,2955,1542,4497,18686.611,0,0,0,1.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,augmented,1,ok,1,0,529,1086,1615,11987.207,0,1,0,1.0,True,load-evidence -> model-analysis,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,chaining,1,ok,3,0,2793,3409,6202,36614.362,2,0,3,0.7143,True,extract-facts -> assess -> recommend,,
+anthropic,anthropic,claude-sonnet-5,4000,60.0,,bc75739c3eb2949f5f8925cc000ea64af320574d,INC-004,routing,1,ok,2,0,864,1329,2193,16216.495,0,0,0,1.0,True,classify -> route:performance -> model-analysis,,
