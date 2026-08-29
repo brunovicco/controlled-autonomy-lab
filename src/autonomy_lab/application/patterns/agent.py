@@ -61,6 +61,7 @@ class AgentLimitError(RuntimeError):
         latency_ms: float,
         steps: tuple[str, ...],
     ) -> None:
+        """Retain metadata-only partial execution state for benchmark evidence."""
         super().__init__(message)
         self.model_calls = model_calls
         self.tool_calls = tool_calls
