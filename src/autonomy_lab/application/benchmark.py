@@ -9,6 +9,7 @@ from autonomy_lab.application.model_errors import ModelProviderError, ModelRateL
 from autonomy_lab.application.patterns.agent import AgentLimitError
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
 from autonomy_lab.domain.benchmark import (
+    EPISTEMIC_EVALUATION_VERSION,
     BenchmarkConfig,
     BenchmarkRecord,
     BenchmarkStatus,
@@ -41,6 +42,22 @@ def _rotated_patterns(
     return ordered[offset:] + ordered[:offset]
 
 
+def _validate_epistemic_configuration(
+    *,
+    config: BenchmarkConfig,
+    evaluate_epistemic_run: EvaluateEpistemicRun | None,
+) -> None:
+    configured = config.epistemic_evaluation_version
+    supplied = evaluate_epistemic_run is not None
+    if supplied and configured != EPISTEMIC_EVALUATION_VERSION:
+        raise ValueError(
+            "epistemic evaluator callback requires "
+            f"epistemic_evaluation_version={EPISTEMIC_EVALUATION_VERSION!r}"
+        )
+    if not supplied and configured is not None:
+        raise ValueError("epistemic_evaluation_version requires an epistemic evaluator callback")
+
+
 def run_benchmark(
     *,
     config: BenchmarkConfig,
@@ -53,6 +70,10 @@ def run_benchmark(
     now: Now = _utc_now,
 ) -> tuple[BenchmarkRecord, ...]:
     """Execute repeated pattern cycles without hidden retries or answer persistence."""
+    _validate_epistemic_configuration(
+        config=config,
+        evaluate_epistemic_run=evaluate_epistemic_run,
+    )
     records: list[BenchmarkRecord] = []
     first_attempt = True
 
@@ -121,6 +142,7 @@ def run_benchmark(
                     pattern=pattern,
                     run_number=run_number,
                     status=BenchmarkStatus.OK,
+                    epistemic_evaluation_version=config.epistemic_evaluation_version,
                     model_calls=run.model_calls,
                     tool_calls=run.tool_calls,
                     input_tokens=run.usage.input_tokens,
@@ -180,6 +202,7 @@ def _failure_record(
         pattern=pattern,
         run_number=run_number,
         status=status,
+        epistemic_evaluation_version=config.epistemic_evaluation_version,
         retry_after=retry_after,
         error=str(error),
     )
@@ -206,6 +229,7 @@ def _bound_exceeded_record(
         pattern=pattern,
         run_number=run_number,
         status=BenchmarkStatus.BOUND_EXCEEDED,
+        epistemic_evaluation_version=config.epistemic_evaluation_version,
         model_calls=error.model_calls,
         tool_calls=error.tool_calls,
         input_tokens=error.usage.input_tokens,
