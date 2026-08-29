@@ -12,6 +12,7 @@ class BenchmarkStatus(StrEnum):
     OK = "ok"
     RATE_LIMITED = "rate_limited"
     PROVIDER_ERROR = "provider_error"
+    BOUND_EXCEEDED = "bound_exceeded"
 
 
 @dataclass(frozen=True, slots=True)
