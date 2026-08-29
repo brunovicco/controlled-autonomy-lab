@@ -51,6 +51,23 @@ steps. You cannot restart services, rollback deployments, change configuration, 
 class AgentLimitError(RuntimeError):
     """Raised when the agent does not finish inside deterministic budgets."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        model_calls: int,
+        tool_calls: int,
+        usage: ModelUsage,
+        latency_ms: float,
+        steps: tuple[str, ...],
+    ) -> None:
+        super().__init__(message)
+        self.model_calls = model_calls
+        self.tool_calls = tool_calls
+        self.usage = usage
+        self.latency_ms = latency_ms
+        self.steps = steps
+
 
 class ToolNotAllowedError(PermissionError):
     """Raised when the model requests a tool outside the explicit allowlist."""
@@ -111,7 +128,14 @@ class BoundedIncidentAgent:
                 results: list[ToolResult] = []
                 for call in turn.message.tool_calls:
                     if tool_calls >= self._max_tool_calls:
-                        raise AgentLimitError("agent exceeded max_tool_calls")
+                        raise self._limit_error(
+                            "agent exceeded max_tool_calls",
+                            started=started,
+                            model_calls=step_number,
+                            tool_calls=tool_calls,
+                            usage=usage,
+                            steps=steps,
+                        )
                     result = self._execute_tool(call, incident_id=incident_id, evidence=evidence)
                     tool_calls += 1
                     steps.append(call.name)
@@ -132,9 +156,42 @@ class BoundedIncidentAgent:
                     usage=usage,
                     latency_ms=(perf_counter() - started) * 1000,
                 )
-            raise AgentLimitError("agent returned neither tool calls nor a final answer")
+            raise self._limit_error(
+                "agent returned neither tool calls nor a final answer",
+                started=started,
+                model_calls=step_number,
+                tool_calls=tool_calls,
+                usage=usage,
+                steps=steps,
+            )
 
-        raise AgentLimitError(f"agent exceeded max_steps={self._max_steps}")
+        raise self._limit_error(
+            f"agent exceeded max_steps={self._max_steps}",
+            started=started,
+            model_calls=self._max_steps,
+            tool_calls=tool_calls,
+            usage=usage,
+            steps=steps,
+        )
+
+    @staticmethod
+    def _limit_error(
+        message: str,
+        *,
+        started: float,
+        model_calls: int,
+        tool_calls: int,
+        usage: ModelUsage,
+        steps: list[str],
+    ) -> AgentLimitError:
+        return AgentLimitError(
+            message,
+            model_calls=model_calls,
+            tool_calls=tool_calls,
+            usage=usage,
+            latency_ms=(perf_counter() - started) * 1000,
+            steps=tuple(steps),
+        )
 
     @staticmethod
     def _execute_tool(
