@@ -1,0 +1,144 @@
+{
+  "aggregate_by_pattern": [
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 0.8873626373626373,
+      "mean_model_calls": 1.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 1167.5,
+      "mean_unsupported": 1.5,
+      "p50_latency_ms": 1540.1653125045414,
+      "pattern": "augmented",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 0.6125,
+      "mean_model_calls": 3.0,
+      "mean_proposed": 2.5,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 4421.5,
+      "mean_unsupported": 2.5,
+      "p50_latency_ms": 4150.106667002547,
+      "pattern": "chaining",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.5,
+      "mean_grounding_ratio": 0.7991071428571428,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 1.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 1800.0,
+      "mean_unsupported": 3.0,
+      "p50_latency_ms": 2117.279228998086,
+      "pattern": "routing",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 2
+    },
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.5,
+      "mean_grounding_ratio": 0.9615384615384616,
+      "mean_model_calls": 4.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 6003.0,
+      "mean_unsupported": 0.5,
+      "p50_latency_ms": 2872.7877919991442,
+      "pattern": "parallel",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 0.8796791443850267,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 2448.5,
+      "mean_unsupported": 1.5,
+      "p50_latency_ms": 2305.264687500312,
+      "pattern": "evaluator-optimizer",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 2,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 0.928921568627451,
+      "mean_model_calls": 4.5,
+      "mean_proposed": 0.5,
+      "mean_tool_calls": 3.5,
+      "mean_total_tokens": 3717.0,
+      "mean_unsupported": 1.0,
+      "p50_latency_ms": 3030.7163545003277,
+      "pattern": "agent",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 2
+    }
+  ],
+  "artifacts": {
+    "INC-001": {
+      "runs_jsonl": "results/breadth-groq-g2/INC-001/runs.jsonl",
+      "summary_csv": "results/breadth-groq-g2/INC-001/summary.csv",
+      "summary_markdown": "results/breadth-groq-g2/INC-001/summary.md"
+    },
+    "INC-002": {
+      "runs_jsonl": "results/breadth-groq-g2/INC-002/runs.jsonl",
+      "summary_csv": "results/breadth-groq-g2/INC-002/summary.csv",
+      "summary_markdown": "results/breadth-groq-g2/INC-002/summary.md"
+    },
+    "INC-003": {
+      "runs_jsonl": "results/breadth-groq-g2/INC-003/runs.jsonl",
+      "summary_csv": "results/breadth-groq-g2/INC-003/summary.csv",
+      "summary_markdown": "results/breadth-groq-g2/INC-003/summary.md"
+    },
+    "INC-004": {
+      "runs_jsonl": "results/breadth-groq-g2/INC-004/runs.jsonl",
+      "summary_csv": "results/breadth-groq-g2/INC-004/summary.csv",
+      "summary_markdown": "results/breadth-groq-g2/INC-004/summary.md"
+    }
+  },
+  "attempted": 24,
+  "completed": 12,
+  "git_commit": "bc75739c3eb2949f5f8925cc000ea64af320574d",
+  "incidents": [
+    "INC-001",
+    "INC-002",
+    "INC-003",
+    "INC-004"
+  ],
+  "max_tokens": 900,
+  "model": "openai/gpt-oss-20b",
+  "patterns": [
+    "augmented",
+    "chaining",
+    "routing",
+    "parallel",
+    "evaluator-optimizer",
+    "agent"
+  ],
+  "provider": "groq",
+  "provider_errors": 0,
+  "rate_limited": 12,
+  "reasoning_effort": "medium",
+  "run_interval_seconds": 30.0,
+  "runs_per_incident_pattern": 1,
+  "schema_version": "breadth-v1",
+  "status": "partial",
+  "timeout_seconds": 30.0
+}

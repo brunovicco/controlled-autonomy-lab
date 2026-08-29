@@ -1,0 +1,37 @@
+provider,incident,incident_semantics,pattern,status,model_calls,tool_calls,grounding_ratio,causality_overclaims,uncertainty_language_detected,trajectory
+openai,INC-001,uncertain / correlation only,routing,ok,2.0,0.0,1.0,0.0,True,classify -> route:deployment -> model-analysis
+openai,INC-002,confirmed deployment cause,routing,ok,2.0,0.0,1.0,0.0,True,classify -> route:deployment -> model-analysis
+openai,INC-003,confirmed dependency cause,routing,ok,2.0,0.0,1.0,0.0,True,classify -> route:dependency -> model-analysis
+openai,INC-004,inconclusive / abstention expected,routing,ok,2.0,0.0,1.0,0.0,True,classify -> route:performance -> model-analysis
+groq,INC-001,uncertain / correlation only,routing,ok,2.0,0.0,0.7857,1.0,True,classify -> route:dependency -> model-analysis
+groq,INC-002,confirmed deployment cause,routing,ok,2.0,0.0,0.8125,0.0,True,classify -> route:deployment -> model-analysis
+groq,INC-003,confirmed dependency cause,routing,rate_limited,,,,,,
+groq,INC-004,inconclusive / abstention expected,routing,rate_limited,,,,,,
+anthropic,INC-001,uncertain / correlation only,routing,ok,2.0,0.0,0.9167,1.0,True,classify -> route:deployment -> model-analysis
+anthropic,INC-002,confirmed deployment cause,routing,ok,2.0,0.0,0.8889,0.0,True,classify -> route:deployment -> model-analysis
+anthropic,INC-003,confirmed dependency cause,routing,ok,2.0,0.0,0.875,0.0,True,classify -> route:dependency -> model-analysis
+anthropic,INC-004,inconclusive / abstention expected,routing,ok,2.0,0.0,1.0,0.0,True,classify -> route:performance -> model-analysis
+openai,INC-001,uncertain / correlation only,evaluator-optimizer,ok,2.0,0.0,1.0,0.0,True,generate -> evaluate:1 -> quality-pass
+openai,INC-002,confirmed deployment cause,evaluator-optimizer,ok,2.0,0.0,1.0,0.0,True,generate -> evaluate:1 -> quality-pass
+openai,INC-003,confirmed dependency cause,evaluator-optimizer,ok,2.0,0.0,1.0,1.0,True,generate -> evaluate:1 -> quality-pass
+openai,INC-004,inconclusive / abstention expected,evaluator-optimizer,ok,2.0,0.0,1.0,1.0,True,generate -> evaluate:1 -> quality-pass
+groq,INC-001,uncertain / correlation only,evaluator-optimizer,ok,2.0,0.0,0.8182,0.0,True,generate -> evaluate:1 -> quality-pass
+groq,INC-002,confirmed deployment cause,evaluator-optimizer,ok,2.0,0.0,0.9412,0.0,True,generate -> evaluate:1 -> quality-pass
+groq,INC-003,confirmed dependency cause,evaluator-optimizer,rate_limited,,,,,,
+groq,INC-004,inconclusive / abstention expected,evaluator-optimizer,rate_limited,,,,,,
+anthropic,INC-001,uncertain / correlation only,evaluator-optimizer,ok,2.0,0.0,1.0,2.0,True,generate -> evaluate:1 -> quality-pass
+anthropic,INC-002,confirmed deployment cause,evaluator-optimizer,ok,4.0,0.0,1.0,0.0,True,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass
+anthropic,INC-003,confirmed dependency cause,evaluator-optimizer,ok,4.0,0.0,1.0,0.0,True,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass
+anthropic,INC-004,inconclusive / abstention expected,evaluator-optimizer,ok,2.0,0.0,1.0,0.0,True,generate -> evaluate:1 -> quality-pass
+openai,INC-001,uncertain / correlation only,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-002,confirmed deployment cause,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-003,confirmed dependency cause,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-004,inconclusive / abstention expected,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+groq,INC-001,uncertain / correlation only,agent,ok,5.0,4.0,0.9167,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> get_previous_incidents -> final-answer
+groq,INC-002,confirmed deployment cause,agent,ok,4.0,3.0,0.9412,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> final-answer
+groq,INC-003,confirmed dependency cause,agent,rate_limited,,,,,,
+groq,INC-004,inconclusive / abstention expected,agent,rate_limited,,,,,,
+anthropic,INC-001,uncertain / correlation only,agent,ok,2.0,5.0,0.8462,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-002,confirmed deployment cause,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-003,confirmed dependency cause,agent,ok,2.0,5.0,0.8333,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-004,inconclusive / abstention expected,agent,ok,2.0,5.0,1.0,0.0,True,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer

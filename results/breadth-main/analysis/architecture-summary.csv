@@ -1,0 +1,7 @@
+pattern,attempted,ok,observable_rate,mean_grounding_ok_only,min_grounding_ok_only,grounding_ge_90_rate_ok_only,mean_causality_overclaims_ok_only,total_causality_overclaims_ok_only,zero_causal_overclaim_rate_ok_only,mean_model_calls_ok_only,mean_tool_calls_ok_only,mean_total_tokens_ok_only,p50_latency_ms_ok_only,unique_provider_trajectory_pairs_ok_only,rate_limited,provider_errors,bound_exceeded
+augmented,12,10,0.8333333333333334,0.9775,0.8462,0.9,0.3,3,0.7,1.0,0.0,1264.3,7690.5585,3,2,0,0
+chaining,12,9,0.75,0.7442,0.6,0.1111,0.5556,5,0.6667,3.0,0.0,4768.5556,26339.3,3,2,1,0
+routing,12,10,0.8333333333333334,0.9279,0.7857,0.6,0.2,2,0.8,2.0,0.0,1560.0,7151.4255,8,2,0,0
+parallel,12,10,0.8333333333333334,0.9485,0.8,0.8,0.7,7,0.6,4.0,0.0,7141.0,21810.7335,3,2,0,0
+evaluator-optimizer,12,10,0.8333333333333334,0.9759,0.8182,0.9,0.4,4,0.7,2.4,0.0,3426.8,9127.149,4,2,0,0
+agent,12,10,0.8333333333333334,0.9537,0.8333,0.8,0.0,0,1.0,2.5,4.7,3157.6,7027.9525,4,2,0,0

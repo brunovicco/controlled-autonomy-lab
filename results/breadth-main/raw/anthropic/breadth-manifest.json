@@ -1,0 +1,144 @@
+{
+  "aggregate_by_pattern": [
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.5,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 1.0,
+      "mean_proposed": 0.25,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 1630.5,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 11827.701645997877,
+      "pattern": "augmented",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 3,
+      "mean_causality_overclaims": 1.3333333333333333,
+      "mean_grounding_ratio": 0.751984126984127,
+      "mean_model_calls": 3.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 6003.666666666667,
+      "mean_unsupported": 1.3333333333333333,
+      "p50_latency_ms": 36614.362084001186,
+      "pattern": "chaining",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.25,
+      "mean_grounding_ratio": 0.9201388888888888,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.0,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 2006.75,
+      "mean_unsupported": 1.25,
+      "p50_latency_ms": 14222.139603996766,
+      "pattern": "routing",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 3
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.75,
+      "mean_grounding_ratio": 0.9083333333333333,
+      "mean_model_calls": 4.0,
+      "mean_proposed": 0.5,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 9678.75,
+      "mean_unsupported": 1.0,
+      "p50_latency_ms": 41071.56389550437,
+      "pattern": "parallel",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.5,
+      "mean_grounding_ratio": 1.0,
+      "mean_model_calls": 3.0,
+      "mean_proposed": 0.25,
+      "mean_tool_calls": 0.0,
+      "mean_total_tokens": 5714.75,
+      "mean_unsupported": 0.0,
+      "p50_latency_ms": 26688.317312997242,
+      "pattern": "evaluator-optimizer",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 2
+    },
+    {
+      "attempted": 4,
+      "completed": 4,
+      "mean_causality_overclaims": 0.0,
+      "mean_grounding_ratio": 0.9198717948717949,
+      "mean_model_calls": 2.0,
+      "mean_proposed": 0.5,
+      "mean_tool_calls": 5.0,
+      "mean_total_tokens": 4364.5,
+      "mean_unsupported": 1.0,
+      "p50_latency_ms": 17357.929583500663,
+      "pattern": "agent",
+      "uncertainty_preservation_rate": 1.0,
+      "unique_trajectories": 1
+    }
+  ],
+  "artifacts": {
+    "INC-001": {
+      "runs_jsonl": "results/breadth-anthropic/INC-001/runs.jsonl",
+      "summary_csv": "results/breadth-anthropic/INC-001/summary.csv",
+      "summary_markdown": "results/breadth-anthropic/INC-001/summary.md"
+    },
+    "INC-002": {
+      "runs_jsonl": "results/breadth-anthropic/INC-002/runs.jsonl",
+      "summary_csv": "results/breadth-anthropic/INC-002/summary.csv",
+      "summary_markdown": "results/breadth-anthropic/INC-002/summary.md"
+    },
+    "INC-003": {
+      "runs_jsonl": "results/breadth-anthropic/INC-003/runs.jsonl",
+      "summary_csv": "results/breadth-anthropic/INC-003/summary.csv",
+      "summary_markdown": "results/breadth-anthropic/INC-003/summary.md"
+    },
+    "INC-004": {
+      "runs_jsonl": "results/breadth-anthropic/INC-004/runs.jsonl",
+      "summary_csv": "results/breadth-anthropic/INC-004/summary.csv",
+      "summary_markdown": "results/breadth-anthropic/INC-004/summary.md"
+    }
+  },
+  "attempted": 24,
+  "completed": 23,
+  "git_commit": "bc75739c3eb2949f5f8925cc000ea64af320574d",
+  "incidents": [
+    "INC-001",
+    "INC-002",
+    "INC-003",
+    "INC-004"
+  ],
+  "max_tokens": 4000,
+  "model": "claude-sonnet-5",
+  "patterns": [
+    "augmented",
+    "chaining",
+    "routing",
+    "parallel",
+    "evaluator-optimizer",
+    "agent"
+  ],
+  "provider": "anthropic",
+  "provider_errors": 1,
+  "rate_limited": 0,
+  "reasoning_effort": "default/provider-defined",
+  "run_interval_seconds": 10.0,
+  "runs_per_incident_pattern": 1,
+  "schema_version": "breadth-v1",
+  "status": "partial",
+  "timeout_seconds": 60.0
+}

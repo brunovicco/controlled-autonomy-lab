@@ -1,0 +1,13 @@
+provider,incident,attempted,ok,rate_limited,provider_error,bound_exceeded,completion_rate
+openai,INC-001,6,6,0,0,0,1.0
+openai,INC-002,6,6,0,0,0,1.0
+openai,INC-003,6,6,0,0,0,1.0
+openai,INC-004,6,6,0,0,0,1.0
+groq,INC-001,6,6,0,0,0,1.0
+groq,INC-002,6,6,0,0,0,1.0
+groq,INC-003,6,0,6,0,0,0.0
+groq,INC-004,6,0,6,0,0,0.0
+anthropic,INC-001,6,6,0,0,0,1.0
+anthropic,INC-002,6,6,0,0,0,1.0
+anthropic,INC-003,6,5,0,1,0,0.8333333333333334
+anthropic,INC-004,6,6,0,0,0,1.0

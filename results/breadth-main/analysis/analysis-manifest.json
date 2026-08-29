@@ -1,0 +1,51 @@
+{
+  "attempted_cells": 72,
+  "comparison_unit": "provider/model/API/config bundle; not a pure model comparison",
+  "excluded_calibration_generations": [
+    {
+      "description": "OpenAI breadth run on pre-fix commit",
+      "git_commit": "14863271f5054756f59227175847e9521b0621c3"
+    },
+    {
+      "description": "Groq pre-fix run that exposed AgentLimitError runner bug",
+      "git_commit": "14863271f5054756f59227175847e9521b0621c3"
+    },
+    {
+      "description": "Groq post-fix calibration executed with max_tokens=1200",
+      "path": "results/breadth-groq"
+    }
+  ],
+  "generation": "main-breadth",
+  "git_commit": "bc75739c3eb2949f5f8925cc000ea64af320574d",
+  "n_per_cell": 1,
+  "observed_successful_cells": 59,
+  "providers": {
+    "anthropic": {
+      "manifest_status": "partial",
+      "max_tokens": 4000,
+      "model": "claude-sonnet-5",
+      "timeout_seconds": 60.0
+    },
+    "groq": {
+      "manifest_status": "partial",
+      "max_tokens": 900,
+      "model": "openai/gpt-oss-20b",
+      "timeout_seconds": 30.0
+    },
+    "openai": {
+      "manifest_status": "complete",
+      "max_tokens": 4000,
+      "model": "gpt-5.6-luna",
+      "timeout_seconds": 60.0
+    }
+  },
+  "quality_metrics_policy": "Quality, grounding, causal, token, latency and trajectory aggregates are calculated only for status=ok cells. Provider failures, rate limits and bound exhaustion are never imputed as zero-quality observations.",
+  "schema_version": "breadth-analysis-v1",
+  "statistical_claims": "descriptive breadth evidence only; no statistical significance",
+  "statuses": {
+    "ok": 59,
+    "provider_error": 1,
+    "rate_limited": 12
+  },
+  "uncertainty_metric_policy": "uncertainty_preserved is treated as lexical uncertainty-language detection, not as proof of correct epistemic posture."
+}

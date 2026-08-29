@@ -1,0 +1,73 @@
+incident,pattern,provider,status,grounding_ratio,unsupported_count,proposed_count,causality_overclaims,uncertainty_language_detected,model_calls,tool_calls,total_tokens,latency_ms,trajectory,error
+INC-001,augmented,openai,ok,1.0,0,0,1,True,1,0,871,7313.038,load-evidence -> model-analysis,
+INC-001,augmented,groq,ok,0.8462,2,0,0,True,1,0,1250,1957.463,load-evidence -> model-analysis,
+INC-001,augmented,anthropic,ok,1.0,0,0,1,True,1,0,1797,17171.276,load-evidence -> model-analysis,
+INC-001,chaining,openai,ok,1.0,0,0,0,True,3,0,3848,26339.3,extract-facts -> assess -> recommend,
+INC-001,chaining,groq,ok,0.625,3,5,0,True,3,0,4194,3810.691,extract-facts -> assess -> recommend,
+INC-001,chaining,anthropic,ok,0.6667,1,0,1,True,3,0,6231,40577.782,extract-facts -> assess -> recommend,
+INC-001,routing,openai,ok,1.0,0,0,0,True,2,0,829,5465.18,classify -> route:deployment -> model-analysis,
+INC-001,routing,groq,ok,0.7857,3,0,1,True,2,0,1888,2171.348,classify -> route:dependency -> model-analysis,
+INC-001,routing,anthropic,ok,0.9167,1,0,1,True,2,0,1862,15100.747,classify -> route:deployment -> model-analysis,
+INC-001,parallel,openai,ok,1.0,0,0,3,True,4,0,5615,20246.595,fan-out:3 -> fan-in -> aggregate,
+INC-001,parallel,groq,ok,1.0,0,0,0,True,4,0,6021,3095.416,fan-out:3 -> fan-in -> aggregate,
+INC-001,parallel,anthropic,ok,0.8333,2,0,0,True,4,0,9147,37284.461,fan-out:3 -> fan-in -> aggregate,
+INC-001,evaluator-optimizer,openai,ok,1.0,0,0,0,True,2,0,1560,10150.39,generate -> evaluate:1 -> quality-pass,
+INC-001,evaluator-optimizer,groq,ok,0.8182,2,0,0,True,2,0,2460,2181.627,generate -> evaluate:1 -> quality-pass,
+INC-001,evaluator-optimizer,anthropic,ok,1.0,0,0,2,True,2,0,3209,17029.067,generate -> evaluate:1 -> quality-pass,
+INC-001,agent,openai,ok,1.0,0,0,0,True,2,5,1699,6829.894,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-001,agent,groq,ok,0.9167,1,1,0,True,5,4,4142,3240.335,get_service_metrics -> get_recent_deployments -> get_dependencies -> get_previous_incidents -> final-answer,
+INC-001,agent,anthropic,ok,0.8462,2,0,0,True,2,5,4403,17790.624,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-002,augmented,openai,ok,1.0,0,0,0,True,1,0,948,7448.007,load-evidence -> model-analysis,
+INC-002,augmented,groq,ok,0.9286,1,0,0,True,1,0,1085,1122.868,load-evidence -> model-analysis,
+INC-002,augmented,anthropic,ok,1.0,0,0,0,True,1,0,1554,11668.196,load-evidence -> model-analysis,
+INC-002,chaining,openai,ok,0.6667,2,0,0,True,3,0,4162,26923.23,extract-facts -> assess -> recommend,
+INC-002,chaining,groq,ok,0.6,2,0,0,True,3,0,4649,4489.522,extract-facts -> assess -> recommend,
+INC-002,chaining,anthropic,ok,0.875,1,0,0,True,3,0,5578,32112.184,extract-facts -> assess -> recommend,
+INC-002,routing,openai,ok,1.0,0,0,0,True,2,0,1014,5384.232,classify -> route:deployment -> model-analysis,
+INC-002,routing,groq,ok,0.8125,3,2,0,True,2,0,1712,2063.21,classify -> route:deployment -> model-analysis,
+INC-002,routing,anthropic,ok,0.8889,2,0,0,True,2,0,2043,13343.532,classify -> route:deployment -> model-analysis,
+INC-002,parallel,openai,ok,1.0,0,0,0,True,4,0,4492,16049.958,fan-out:3 -> fan-in -> aggregate,
+INC-002,parallel,groq,ok,0.9231,1,0,1,True,4,0,5985,2650.16,fan-out:3 -> fan-in -> aggregate,
+INC-002,parallel,anthropic,ok,1.0,0,1,0,True,4,0,10125,44367.402,fan-out:3 -> fan-in -> aggregate,
+INC-002,evaluator-optimizer,openai,ok,1.0,0,0,0,True,2,0,1639,7382.13,generate -> evaluate:1 -> quality-pass,
+INC-002,evaluator-optimizer,groq,ok,0.9412,1,0,0,True,2,0,2437,2428.903,generate -> evaluate:1 -> quality-pass,
+INC-002,evaluator-optimizer,anthropic,ok,1.0,0,1,0,True,4,0,8399,36347.568,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass,
+INC-002,agent,openai,ok,1.0,0,0,0,True,2,5,1629,6016.927,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-002,agent,groq,ok,0.9412,1,0,0,True,4,3,3292,2821.097,get_service_metrics -> get_recent_deployments -> get_dependencies -> final-answer,
+INC-002,agent,anthropic,ok,1.0,0,2,0,True,2,5,4337,16766.507,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-003,augmented,openai,ok,1.0,0,0,0,True,1,0,924,7105.946,load-evidence -> model-analysis,
+INC-003,augmented,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,augmented,anthropic,ok,1.0,0,0,1,True,1,0,1556,11397.496,load-evidence -> model-analysis,
+INC-003,chaining,openai,ok,0.75,1,0,0,True,3,0,3495,22061.887,extract-facts -> assess -> recommend,
+INC-003,chaining,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,chaining,anthropic,provider_error,,,,,,,,,,,Anthropic request failed
+INC-003,routing,openai,ok,1.0,0,0,0,True,2,0,879,5576.814,classify -> route:dependency -> model-analysis,
+INC-003,routing,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,routing,anthropic,ok,0.875,2,0,0,True,2,0,1929,13232.86,classify -> route:dependency -> model-analysis,
+INC-003,parallel,openai,ok,0.9286,1,1,0,True,4,0,4494,20947.095,fan-out:3 -> fan-in -> aggregate,
+INC-003,parallel,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,parallel,anthropic,ok,0.8,2,0,2,True,4,0,9532,43248.0,fan-out:3 -> fan-in -> aggregate,
+INC-003,evaluator-optimizer,openai,ok,1.0,0,0,1,True,2,0,1607,7920.15,generate -> evaluate:1 -> quality-pass,
+INC-003,evaluator-optimizer,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,evaluator-optimizer,anthropic,ok,1.0,0,0,0,True,4,0,8338,37282.906,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass,
+INC-003,agent,openai,ok,1.0,0,0,0,True,2,5,1563,5881.722,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-003,agent,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-003,agent,anthropic,ok,0.8333,2,0,0,True,2,5,4221,16925.235,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-004,augmented,openai,ok,1.0,0,0,0,True,1,0,1043,7933.11,load-evidence -> model-analysis,
+INC-004,augmented,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,augmented,anthropic,ok,1.0,0,1,0,True,1,0,1615,11987.207,load-evidence -> model-analysis,
+INC-004,chaining,openai,ok,0.8,1,1,1,True,3,0,4558,25740.695,extract-facts -> assess -> recommend,
+INC-004,chaining,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,chaining,anthropic,ok,0.7143,2,0,3,True,3,0,6202,36614.362,extract-facts -> assess -> recommend,
+INC-004,routing,openai,ok,1.0,0,0,0,True,2,0,1251,8726.037,classify -> route:performance -> model-analysis,
+INC-004,routing,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,routing,anthropic,ok,1.0,0,0,0,True,2,0,2193,16216.495,classify -> route:performance -> model-analysis,
+INC-004,parallel,openai,ok,1.0,0,0,0,True,4,0,6088,22674.372,fan-out:3 -> fan-in -> aggregate,
+INC-004,parallel,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,parallel,anthropic,ok,1.0,0,1,1,True,4,0,9911,38895.128,fan-out:3 -> fan-in -> aggregate,
+INC-004,evaluator-optimizer,openai,ok,1.0,0,0,1,True,2,0,1706,8103.908,generate -> evaluate:1 -> quality-pass,
+INC-004,evaluator-optimizer,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,evaluator-optimizer,anthropic,ok,1.0,0,0,0,True,2,0,2913,12824.192,generate -> evaluate:1 -> quality-pass,
+INC-004,agent,openai,ok,1.0,0,0,0,True,2,5,1793,7226.011,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,
+INC-004,agent,groq,rate_limited,,,,,,,,,,,Groq API returned HTTP 429
+INC-004,agent,anthropic,ok,1.0,0,0,0,True,2,5,4497,18686.611,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer,

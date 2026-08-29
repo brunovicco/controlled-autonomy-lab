@@ -1,0 +1,51 @@
+{
+  "excluded_calibrations": [
+    "OpenAI breadth generation on 14863271f5054756f59227175847e9521b0621c3",
+    "Groq failed/calibration generation on 14863271f5054756f59227175847e9521b0621c3",
+    "Groq post-fix 1200-token calibration results/breadth-groq"
+  ],
+  "experiment": "multi-incident-breadth-main",
+  "git_commit": "bc75739c3eb2949f5f8925cc000ea64af320574d",
+  "methodology": {
+    "credentials_persisted": false,
+    "evidence_bodies_persisted": false,
+    "non_ok_quality_imputation": false,
+    "prompts_persisted": false,
+    "provider_comparison_unit": "provider/model/API/configuration bundle",
+    "quality_metrics_only_for_status_ok": true,
+    "raw_answer_bodies_persisted": false,
+    "runs_per_cell": 1,
+    "statistical_significance_claimed": false,
+    "tool_arguments_or_results_persisted": false
+  },
+  "provider_bundles": {
+    "anthropic": {
+      "max_tokens": 4000,
+      "model": "claude-sonnet-5",
+      "timeout_seconds": 60.0
+    },
+    "groq": {
+      "max_tokens": 900,
+      "model": "openai/gpt-oss-20b",
+      "timeout_seconds": 30.0
+    },
+    "openai": {
+      "max_tokens": 4000,
+      "model": "gpt-5.6-luna",
+      "timeout_seconds": 60.0
+    }
+  },
+  "shape": {
+    "attempted_cells": 72,
+    "incidents": 4,
+    "patterns": 6,
+    "provider_bundles": 3,
+    "runs_per_cell": 1
+  },
+  "statuses": {
+    "ok": 59,
+    "provider_error": 1,
+    "rate_limited": 12
+  },
+  "successful_cells": 59
+}
