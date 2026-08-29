@@ -98,12 +98,15 @@ def _causal_signals(answer: str, incident: Incident) -> tuple[bool, bool, bool]:
             continue
         if not _CAUSALITY_RE.search(sentence):
             continue
+
+        is_hedged = bool(_HEDGE_RE.search(sentence))
+        if is_hedged:
+            hedged_causal = True
+
         if _ABSTENTION_RE.search(sentence) or _CAUSAL_REJECTION_RE.search(sentence):
             continue
-        if _HEDGE_RE.search(sentence):
-            hedged_causal = True
-            continue
-        causal_assertion = True
+        if not is_hedged:
+            causal_assertion = True
 
     return causal_assertion, hedged_causal, abstention
 
