@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from autonomy_lab.domain.benchmark import (
+    BENCHMARK_RECORD_SCHEMA_VERSION,
+    BENCHMARK_SUMMARY_SCHEMA_VERSION,
+    EPISTEMIC_EVALUATION_VERSION,
+    GROUNDING_EVALUATION_VERSION,
     BenchmarkConfig,
     BenchmarkRecord,
     BenchmarkStatus,
@@ -82,6 +86,9 @@ def write_benchmark_artifacts(
 
 def _record_payload(record: BenchmarkRecord) -> dict[str, Any]:
     return {
+        "schema_version": BENCHMARK_RECORD_SCHEMA_VERSION,
+        "grounding_evaluation_version": GROUNDING_EVALUATION_VERSION,
+        "epistemic_evaluation_version": EPISTEMIC_EVALUATION_VERSION,
         "timestamp_utc": record.timestamp_utc,
         "git_commit": record.git_commit,
         "provider": record.provider,
@@ -104,6 +111,19 @@ def _record_payload(record: BenchmarkRecord) -> dict[str, Any]:
         "causality_overclaims": record.causality_overclaims,
         "grounding_ratio": _rounded(record.grounding_ratio, digits=4),
         "uncertainty_preserved": record.uncertainty_preserved,
+        "epistemic_expected_posture": (
+            record.epistemic_expected_posture.value
+            if record.epistemic_expected_posture is not None
+            else None
+        ),
+        "epistemic_verdict": (
+            record.epistemic_verdict.value if record.epistemic_verdict is not None else None
+        ),
+        "epistemic_aligned": record.epistemic_aligned,
+        "causal_assertion_detected": record.causal_assertion_detected,
+        "hedged_causal_language_detected": record.hedged_causal_language_detected,
+        "abstention_detected": record.abstention_detected,
+        "uncertainty_language_detected": record.uncertainty_language_detected,
         "trajectory": list(record.trajectory),
         "retry_after": record.retry_after,
         "error": record.error,
@@ -116,6 +136,9 @@ def _summary_csv(
     summaries: tuple[PatternBenchmarkSummary, ...],
 ) -> str:
     fieldnames = [
+        "schema_version",
+        "grounding_evaluation_version",
+        "epistemic_evaluation_version",
         "git_commit",
         "provider",
         "model",
@@ -131,9 +154,11 @@ def _summary_csv(
         "completed",
         "rate_limited",
         "provider_errors",
+        "bound_exceeded",
         "completion_rate",
         "rate_limit_rate",
         "provider_error_rate",
+        "bound_exceeded_rate",
         "mean_model_calls",
         "mean_tool_calls",
         "mean_input_tokens",
@@ -145,6 +170,13 @@ def _summary_csv(
         "mean_causality_overclaims",
         "mean_grounding_ratio",
         "uncertainty_preservation_rate",
+        "epistemic_evaluated",
+        "epistemic_aligned",
+        "epistemic_alignment_rate",
+        "epistemic_overclaimed",
+        "epistemic_over_hedged",
+        "epistemic_insufficient_abstention",
+        "epistemic_no_position",
         "unique_trajectories",
     ]
     status = _benchmark_status_from_summaries(summaries)
@@ -154,6 +186,9 @@ def _summary_csv(
     for summary in summaries:
         writer.writerow(
             {
+                "schema_version": BENCHMARK_SUMMARY_SCHEMA_VERSION,
+                "grounding_evaluation_version": GROUNDING_EVALUATION_VERSION,
+                "epistemic_evaluation_version": EPISTEMIC_EVALUATION_VERSION,
                 "git_commit": config.git_commit,
                 "provider": config.provider,
                 "model": config.model,
@@ -169,9 +204,11 @@ def _summary_csv(
                 "completed": summary.completed,
                 "rate_limited": summary.rate_limited,
                 "provider_errors": summary.provider_errors,
+                "bound_exceeded": summary.bound_exceeded,
                 "completion_rate": _csv_number(summary.completion_rate),
                 "rate_limit_rate": _csv_number(summary.rate_limit_rate),
                 "provider_error_rate": _csv_number(summary.provider_error_rate),
+                "bound_exceeded_rate": _csv_number(summary.bound_exceeded_rate),
                 "mean_model_calls": _csv_number(summary.mean_model_calls),
                 "mean_tool_calls": _csv_number(summary.mean_tool_calls),
                 "mean_input_tokens": _csv_number(summary.mean_input_tokens),
@@ -183,6 +220,13 @@ def _summary_csv(
                 "mean_causality_overclaims": _csv_number(summary.mean_causality_overclaims),
                 "mean_grounding_ratio": _csv_number(summary.mean_grounding_ratio),
                 "uncertainty_preservation_rate": _csv_number(summary.uncertainty_preservation_rate),
+                "epistemic_evaluated": summary.epistemic_evaluated,
+                "epistemic_aligned": summary.epistemic_aligned,
+                "epistemic_alignment_rate": _csv_number(summary.epistemic_alignment_rate),
+                "epistemic_overclaimed": summary.epistemic_overclaimed,
+                "epistemic_over_hedged": summary.epistemic_over_hedged,
+                "epistemic_insufficient_abstention": summary.epistemic_insufficient_abstention,
+                "epistemic_no_position": summary.epistemic_no_position,
                 "unique_trajectories": summary.unique_trajectories,
             }
         )
@@ -198,10 +242,14 @@ def _summary_markdown(
     partial = any(record.status is not BenchmarkStatus.OK for record in records)
     rate_limited = any(record.status is BenchmarkStatus.RATE_LIMITED for record in records)
     provider_errors = any(record.status is BenchmarkStatus.PROVIDER_ERROR for record in records)
+    bound_exceeded = any(record.status is BenchmarkStatus.BOUND_EXCEEDED for record in records)
     reasoning = config.reasoning_effort or "default/provider-defined"
     lines = [
         "# Reproducible Benchmark Summary",
         "",
+        f"- Summary schema: `{BENCHMARK_SUMMARY_SCHEMA_VERSION}`",
+        f"- Grounding evaluator: `{GROUNDING_EVALUATION_VERSION}`",
+        f"- Epistemic evaluator: `{EPISTEMIC_EVALUATION_VERSION}`",
         f"- Git commit: `{config.git_commit}`",
         f"- Provider: `{config.provider}`",
         f"- Model: `{config.model}`",
@@ -217,6 +265,12 @@ def _summary_markdown(
             "The interval applies between benchmark attempts only. It does not serialize "
             "calls inside a pattern; parallel fan-out remains concurrent and multi-call "
             "patterns retain their original behavior."
+        ),
+        "",
+        (
+            "Epistemic aggregates are computed only from successful cells carrying an "
+            "`epistemic-v4.1` verdict. Provider failures and bounded-agent exhaustion are "
+            "availability/runtime evidence, not quality zeros."
         ),
     ]
     if rate_limited:
@@ -240,17 +294,27 @@ def _summary_markdown(
                 ),
             ]
         )
+    if bound_exceeded:
+        lines.extend(
+            [
+                "",
+                (
+                    "Bound-exceeded attempts are retained as runtime evidence with partial "
+                    "metadata. They are excluded from grounding and epistemic quality aggregates."
+                ),
+            ]
+        )
     lines.extend(
         [
             "",
             (
-                "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Unsupported "
-                "| Proposed | Causality | Grounding | Rate limited | Provider errors | "
-                "Trajectories |"
+                "| Pattern | Success | Calls | Tools | Avg tokens | p50 latency | Grounding | "
+                "Epistemic aligned | Overclaim | Over-hedged | Need abstain | No position | "
+                "Rate limited | Provider errors | Bound exceeded | Trajectories |"
             ),
             (
                 "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | "
-                "---: | ---: | ---: |"
+                "---: | ---: | ---: | ---: | ---: | ---: |"
             ),
         ]
     )
@@ -265,12 +329,15 @@ def _summary_markdown(
                     _md_number(summary.mean_tool_calls),
                     _md_number(summary.mean_total_tokens, digits=0),
                     _md_number(summary.p50_latency_ms, suffix=" ms"),
-                    _md_number(summary.mean_unsupported),
-                    _md_number(summary.mean_proposed),
-                    _md_number(summary.mean_causality_overclaims),
                     _md_percent(summary.mean_grounding_ratio),
+                    _md_percent(summary.epistemic_alignment_rate),
+                    str(summary.epistemic_overclaimed),
+                    str(summary.epistemic_over_hedged),
+                    str(summary.epistemic_insufficient_abstention),
+                    str(summary.epistemic_no_position),
                     _md_percent(summary.rate_limit_rate),
                     _md_percent(summary.provider_error_rate),
+                    _md_percent(summary.bound_exceeded_rate),
                     str(summary.unique_trajectories),
                 ]
             )
