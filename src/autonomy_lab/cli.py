@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -37,10 +38,17 @@ from autonomy_lab.application.semantic_claim_evaluation import (
     SemanticClaimEvaluatorV21,
 )
 from autonomy_lab.domain.autonomy import AutonomyPattern, PatternRun
-from autonomy_lab.domain.benchmark import BenchmarkConfig, BenchmarkStatus
+from autonomy_lab.domain.benchmark import (
+    BenchmarkConfig,
+    BenchmarkRecord,
+    BenchmarkStatus,
+    PatternBenchmarkSummary,
+)
 from autonomy_lab.domain.claim_evaluation import ClaimEvaluationReport
 from autonomy_lab.domain.grounding import GroundingFinding, GroundingReport
 from autonomy_lab.domain.semantic_claim_evaluation import MergedClaimEvaluationReport
+
+BREADTH_INCIDENTS = ("INC-001", "INC-002", "INC-003", "INC-004")
 
 
 def _build_runner(
@@ -418,7 +426,13 @@ def _parser() -> argparse.ArgumentParser:
         "benchmark",
         help="run repeated architecture cycles and persist reproducible metadata-only results",
     )
-    benchmark_parser.add_argument("--incident", default="INC-001")
+    benchmark_incidents = benchmark_parser.add_mutually_exclusive_group()
+    benchmark_incidents.add_argument("--incident", default="INC-001")
+    benchmark_incidents.add_argument(
+        "--all-incidents",
+        action="store_true",
+        help="run the benchmark across the canonical four-incident breadth suite",
+    )
     benchmark_parser.add_argument("--runs", type=_positive_int, default=5)
     benchmark_parser.add_argument("--output", default="results")
     benchmark_parser.add_argument(
@@ -444,12 +458,193 @@ def _print_compare_failure(pattern: AutonomyPattern, status: str) -> None:
     print(f"{pattern.value} | - | - | - | - | - | - | - | - | - | {status}")
 
 
+def _rotated_breadth_patterns(incident_index: int) -> tuple[AutonomyPattern, ...]:
+    patterns = tuple(AutonomyPattern)
+    if not patterns:
+        return ()
+    offset = incident_index % len(patterns)
+    return patterns[offset:] + patterns[:offset]
+
+
+def _run_breadth_benchmark(
+    *,
+    args: argparse.Namespace,
+    store: InMemoryIncidentStore,
+    model: ModelClient,
+) -> int:
+    output_dir = Path(args.output)
+    manifest_path = output_dir / "breadth-manifest.json"
+    if manifest_path.exists() and not args.overwrite:
+        print(
+            f"breadth benchmark output already exists: {manifest_path.name}; use --overwrite",
+            file=sys.stderr,
+        )
+        return 2
+
+    environment = benchmark_environment_from_env()
+    evaluator = DeterministicGroundingEvaluator()
+    canonical_patterns = tuple(AutonomyPattern)
+    plans: list[tuple[str, BenchmarkConfig, tuple[AutonomyPattern, ...], Path]] = []
+
+    for incident_index, incident_id in enumerate(BREADTH_INCIDENTS):
+        incident_output = output_dir / incident_id
+        try:
+            assert_benchmark_output_available(incident_output, overwrite=args.overwrite)
+        except FileExistsError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        config = BenchmarkConfig(
+            incident_id=incident_id,
+            runs=args.runs,
+            provider=environment.provider,
+            model=environment.model,
+            max_tokens=environment.max_tokens,
+            timeout_seconds=environment.timeout_seconds,
+            reasoning_effort=environment.reasoning_effort,
+            run_interval_seconds=args.run_interval_seconds,
+            git_commit=environment.git_commit,
+        )
+        plans.append(
+            (
+                incident_id,
+                config,
+                _rotated_breadth_patterns(incident_index),
+                incident_output,
+            )
+        )
+
+    completed_plans: list[
+        tuple[
+            str,
+            BenchmarkConfig,
+            tuple[BenchmarkRecord, ...],
+            tuple[PatternBenchmarkSummary, ...],
+            Path,
+        ]
+    ] = []
+
+    for incident_index, (incident_id, config, execution_patterns, incident_output) in enumerate(
+        plans
+    ):
+        if incident_index > 0 and args.run_interval_seconds > 0:
+            time.sleep(args.run_interval_seconds)
+
+        def execute(pattern: AutonomyPattern, active_incident: str = incident_id) -> PatternRun:
+            return _build_runner(pattern, store=store, model=model).run(active_incident)
+
+        def evaluate(run: PatternRun) -> GroundingReport:
+            return _grounding_for_run(run, store=store, evaluator=evaluator)
+
+        records = run_benchmark(
+            config=config,
+            patterns=execution_patterns,
+            run_pattern=execute,
+            evaluate_run=evaluate,
+            on_success=lambda run: _record_if_requested(run, args.trace_file),
+        )
+        summaries = summarize_benchmark(records, patterns=canonical_patterns)
+        completed_plans.append((incident_id, config, records, summaries, incident_output))
+
+    for _, config, records, summaries, incident_output in completed_plans:
+        write_benchmark_artifacts(
+            output_dir=incident_output,
+            config=config,
+            records=records,
+            summaries=summaries,
+            overwrite=args.overwrite,
+        )
+
+    all_records = tuple(record for _, _, records, _, _ in completed_plans for record in records)
+    aggregate = summarize_benchmark(all_records, patterns=canonical_patterns)
+    partial = any(record.status is not BenchmarkStatus.OK for record in all_records)
+    rate_limited = sum(record.status is BenchmarkStatus.RATE_LIMITED for record in all_records)
+    provider_errors = sum(record.status is BenchmarkStatus.PROVIDER_ERROR for record in all_records)
+    completed = sum(record.status is BenchmarkStatus.OK for record in all_records)
+
+    manifest = {
+        "schema_version": "breadth-v1",
+        "git_commit": environment.git_commit,
+        "provider": environment.provider,
+        "model": environment.model,
+        "max_tokens": environment.max_tokens,
+        "timeout_seconds": environment.timeout_seconds,
+        "reasoning_effort": environment.reasoning_effort or "default/provider-defined",
+        "runs_per_incident_pattern": args.runs,
+        "run_interval_seconds": args.run_interval_seconds,
+        "incidents": list(BREADTH_INCIDENTS),
+        "patterns": [pattern.value for pattern in canonical_patterns],
+        "attempted": len(all_records),
+        "completed": completed,
+        "rate_limited": rate_limited,
+        "provider_errors": provider_errors,
+        "status": "partial" if partial else "complete",
+        "aggregate_by_pattern": [
+            {
+                "pattern": summary.pattern.value,
+                "attempted": summary.attempted,
+                "completed": summary.completed,
+                "mean_model_calls": summary.mean_model_calls,
+                "mean_tool_calls": summary.mean_tool_calls,
+                "mean_total_tokens": summary.mean_total_tokens,
+                "p50_latency_ms": summary.p50_latency_ms,
+                "mean_unsupported": summary.mean_unsupported,
+                "mean_proposed": summary.mean_proposed,
+                "mean_causality_overclaims": summary.mean_causality_overclaims,
+                "mean_grounding_ratio": summary.mean_grounding_ratio,
+                "uncertainty_preservation_rate": summary.uncertainty_preservation_rate,
+                "unique_trajectories": summary.unique_trajectories,
+            }
+            for summary in aggregate
+        ],
+        "artifacts": {
+            incident_id: {
+                "runs_jsonl": str(incident_output / "runs.jsonl"),
+                "summary_csv": str(incident_output / "summary.csv"),
+                "summary_markdown": str(incident_output / "summary.md"),
+            }
+            for incident_id, _, _, _, incident_output in completed_plans
+        },
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    temporary = manifest_path.with_name(f".{manifest_path.name}.tmp")
+    temporary.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(manifest_path)
+
+    print(f"breadth benchmark: {'partial' if partial else 'complete'}")
+    print(f"provider:          {environment.provider}")
+    print(f"model:             {environment.model}")
+    print(f"commit:            {environment.git_commit}")
+    print(f"incidents:         {', '.join(BREADTH_INCIDENTS)}")
+    print(f"runs:              {args.runs} per incident/pattern")
+    print(f"attempts:          {len(all_records)}")
+    print(f"completed:         {completed}")
+    print(f"manifest:          {manifest_path}")
+    print("\npattern | success | p50_ms | grounding | trajectories")
+    print("-" * 72)
+    for summary in aggregate:
+        latency = "-" if summary.p50_latency_ms is None else f"{summary.p50_latency_ms:.1f}"
+        grounding = (
+            "-" if summary.mean_grounding_ratio is None else f"{summary.mean_grounding_ratio:.1%}"
+        )
+        print(
+            f"{summary.pattern.value} | {summary.completed}/{summary.attempted} | "
+            f"{latency} | {grounding} | {summary.unique_trajectories}"
+        )
+    return 2 if partial else 0
+
+
 def _run_reproducible_benchmark(
     *,
     args: argparse.Namespace,
     store: InMemoryIncidentStore,
     model: ModelClient,
 ) -> int:
+    if args.all_incidents:
+        return _run_breadth_benchmark(args=args, store=store, model=model)
+
     output_dir = Path(args.output)
     try:
         assert_benchmark_output_available(output_dir, overwrite=args.overwrite)
