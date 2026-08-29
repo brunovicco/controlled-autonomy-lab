@@ -125,9 +125,9 @@ def run_benchmark(
             if on_success is not None:
                 on_success(run)
             grounding = evaluate_run(run)
-            epistemic = (
-                evaluate_epistemic_run(run) if evaluate_epistemic_run is not None else None
-            )
+            epistemic = None
+            if evaluate_epistemic_run is not None:
+                epistemic = evaluate_epistemic_run(run)
             records.append(
                 BenchmarkRecord(
                     timestamp_utc=timestamp,
