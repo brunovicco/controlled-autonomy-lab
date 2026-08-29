@@ -4,11 +4,7 @@ import re
 
 from autonomy_lab.application.grounding import DeterministicGroundingEvaluator
 from autonomy_lab.domain.autonomy import EvidenceItem, Incident
-from autonomy_lab.domain.epistemic import (
-    EpistemicReport,
-    EpistemicVerdict,
-    EvidencePosture,
-)
+from autonomy_lab.domain.epistemic import EpistemicReport, EpistemicVerdict, EvidencePosture
 
 _CONFIRMED_CAUSE_RE = re.compile(
     r"\broot cause confirmed for\s+(?P<incident>INC-\d+)\b",
@@ -19,7 +15,8 @@ _INCONCLUSIVE_RE = re.compile(
     re.IGNORECASE,
 )
 _CAUSALITY_RE = re.compile(
-    r"\b(?:caused|causes|causing|root cause|resulted in|results in|led to|leads to|due to)\b",
+    r"\b(?:caused|causes|causing|contribute|contributed|contributes|contributing|root cause|"
+    r"resulted in|results in|led to|leads to|due to)\b",
     re.IGNORECASE,
 )
 _HEDGE_RE = re.compile(
