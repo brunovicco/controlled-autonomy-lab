@@ -217,9 +217,10 @@ def _validate_record(provider: str, row: Mapping[str, Any]) -> None:
         raise ValueError(f"unknown incident: {row.get('incident_id')!r}")
     if row.get("pattern") not in PATTERNS:
         raise ValueError(f"unknown pattern: {row.get('pattern')!r}")
-    if row.get("status") != "ok":
-        if row.get("epistemic_verdict") is not None or row.get("epistemic_aligned") is not None:
-            raise ValueError("non-OK record contains epistemic quality verdict")
+    if row.get("status") != "ok" and (
+        row.get("epistemic_verdict") is not None or row.get("epistemic_aligned") is not None
+    ):
+        raise ValueError("non-OK record contains epistemic quality verdict")
 
 
 def _copy_provider(
@@ -247,7 +248,9 @@ def _copy_provider(
         source_runs = source / incident / "runs.jsonl"
         incident_rows = _load_jsonl(source_runs)
         if len(incident_rows) != len(PATTERNS):
-            raise ValueError(f"{provider}/{incident}: expected 6 records, found {len(incident_rows)}")
+            raise ValueError(
+                f"{provider}/{incident}: expected 6 records, found {len(incident_rows)}"
+            )
         for row in incident_rows:
             _scan_forbidden(row, location=f"{source_runs}:{row.get('pattern')}")
             _validate_record(provider, row)
@@ -440,22 +443,22 @@ Frozen implementation:
 
 Experiment shape:
 
-`4 incidents × 6 architecture patterns × 1 run × 3 provider bundles = 72 attempts`
+`4 incidents x 6 architecture patterns x 1 run x 3 provider bundles = 72 attempts`
 
 Observed execution:
 
-- {statuses.get('ok', 0)} successful cells;
-- {statuses.get('rate_limited', 0)} rate-limited cell;
-- {statuses.get('provider_error', 0)} provider-error cell;
-- {statuses.get('bound_exceeded', 0)} bound-exceeded cells.
+- {statuses.get("ok", 0)} successful cells;
+- {statuses.get("rate_limited", 0)} rate-limited cell;
+- {statuses.get("provider_error", 0)} provider-error cell;
+- {statuses.get("bound_exceeded", 0)} bound-exceeded cells.
 
 Successful-cell Epistemic v4.1 verdicts:
 
-- {verdicts.get('aligned', 0)} aligned;
-- {verdicts.get('overclaimed', 0)} overclaimed;
-- {verdicts.get('no-position', 0)} no-position;
-- {verdicts.get('over-hedged', 0)} over-hedged;
-- {verdicts.get('insufficient-abstention', 0)} insufficient-abstention.
+- {verdicts.get("aligned", 0)} aligned;
+- {verdicts.get("overclaimed", 0)} overclaimed;
+- {verdicts.get("no-position", 0)} no-position;
+- {verdicts.get("over-hedged", 0)} over-hedged;
+- {verdicts.get("insufficient-abstention", 0)} insufficient-abstention.
 
 ## Evidence chain
 
@@ -574,8 +577,7 @@ def main() -> int:
             raise ValueError(f"expected 72 canonical records, found {len(all_rows)}")
 
         canonical = {
-            (str(row["provider"]), str(row["incident_id"]), str(row["pattern"]))
-            for row in all_rows
+            (str(row["provider"]), str(row["incident_id"]), str(row["pattern"])) for row in all_rows
         }
         if len(canonical) != 72:
             raise ValueError("duplicate or missing provider/incident/pattern cells")
