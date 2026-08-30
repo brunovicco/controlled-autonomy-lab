@@ -1,0 +1,25 @@
+name: finalize-portfolio-readme
+
+on:
+  push:
+    branches:
+      - docs/portfolio-release-v0-2
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Apply portfolio README updates
+        run: python scripts/finalize_portfolio_readme.py
+      - name: Commit README updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --check
+          git commit -m "docs: polish portfolio landing page"
+          git push origin HEAD:docs/portfolio-release-v0-2
