@@ -1,5 +1,7 @@
 # Controlled Autonomy Lab
 
+> **Language:** **English** · [Português (Brasil)](README.pt-BR.md)
+
 [![quality](https://github.com/brunovicco/controlled-autonomy-lab/actions/workflows/quality.yml/badge.svg)](https://github.com/brunovicco/controlled-autonomy-lab/actions/workflows/quality.yml)
 ![Python](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
