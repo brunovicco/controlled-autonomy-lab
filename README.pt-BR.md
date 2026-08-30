@@ -16,6 +16,29 @@ A pergunta central não é se agentes são melhores que workflows. É:
 
 O lab torna esse limite de delegação observável por meio de topologia de execução, uso de ferramentas, latência, uso de tokens, grounding determinístico, avaliação em nível de claim, verificações de autoridade causal e julgamento semântico seletivo.
 
+## Origem e motivação
+
+A ideia deste laboratório surgiu enquanto eu estudava o **Módulo 1 — Claude Platform & Solution Design** da trilha **Claude Certified Architect Foundations**.
+
+O conteúdo sobre seleção de padrões apresenta augmented LLMs, workflows e agents como escolhas arquiteturais diferentes sobre **previsibilidade e autonomia do modelo**. Em um workflow, o código da aplicação mantém o controle do caminho geral de execução enquanto o modelo exerce julgamento limitado dentro de cada etapa. Em um agent, o próprio modelo pode controlar a trajetória e decidir o próximo passo a partir do que já observou.
+
+Essa distinção levantou uma pergunta prática:
+
+> O que realmente muda quando o controle sobre o próximo passo deixa o código determinístico da aplicação e passa para o modelo?
+
+Controlled Autonomy Lab é minha tentativa independente de tornar esse trade-off arquitetural observável e mensurável, em vez de mantê-lo apenas no campo conceitual.
+
+Por isso, o projeto compara a mesma tarefa limitada usando diferentes padrões de controle e mede topologia de execução, comportamento de providers, grounding, autoridade causal, latência, uso de tokens e uso limitado de ferramentas.
+
+O treinamento também reforçou duas decisões de design que permanecem explícitas neste repositório:
+
+- preferir a arquitetura mais simples que satisfaça os requisitos de tolerância a erro e observabilidade da tarefa, em vez de escolher agents apenas pela flexibilidade;
+- tratar autonomia do modelo e permissões de ferramentas como uma fronteira de autoridade, mantendo capacidades executáveis tão restritas quanto a tarefa permitir.
+
+Essa também é a razão pela qual o projeto **não** introduz orquestração multi-agent, MCP ou A2A apenas para ampliar a quantidade de tecnologias utilizadas. Esses mecanismos devem entrar quando existir uma necessidade real de decomposição ou uma fronteira autêntica entre processos ou serviços.
+
+> **Nota de independência:** Controlled Autonomy Lab é um projeto independente de engenharia e aprendizado. Não é um projeto da Anthropic, uma arquitetura de referência oficial, um artefato da certificação ou um endosso da Anthropic. A implementação, os experimentos, os avaliadores, a metodologia e as conclusões deste repositório são de minha autoria.
+
 ## O case em resumo
 
 | Dimensão | Escopo |
