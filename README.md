@@ -16,6 +16,29 @@ The central question is not whether agents are better than workflows. It is:
 
 The lab makes that delegation boundary observable through execution topology, tool use, latency, token usage, deterministic grounding, claim-level evaluation, causal-authority checks, and selective semantic judgement.
 
+## Origin and motivation
+
+The idea for this lab emerged while I was studying **Module 1 — Claude Platform & Solution Design** from the **Claude Certified Architect Foundations** learning path.
+
+The pattern-selection material frames augmented LLMs, workflows, and agents as different architectural choices about **predictability and model autonomy**. In a workflow, application code owns the overall execution path while the model exercises bounded judgment inside individual steps. In an agent, the model can own the trajectory itself and decide what to do next based on what it has already observed.
+
+That distinction raised a practical question:
+
+> What actually changes when control over the next step moves from deterministic application code to the model?
+
+Controlled Autonomy Lab is my independent attempt to make that architectural trade-off observable and measurable rather than purely conceptual.
+
+The project therefore compares the same bounded task across progressively different control patterns, while measuring execution topology, provider behavior, grounding, causal authority, latency, token usage, and bounded tool use.
+
+The training material also reinforced two design choices that remain explicit in this repository:
+
+- prefer the simplest architecture that satisfies the task's error-tolerance and observability requirements rather than choosing agents for flexibility alone;
+- treat model autonomy and tool permissions as an authority boundary, keeping executable capabilities as narrow as the task requires.
+
+That is also why this project does **not** introduce multi-agent orchestration, MCP, or A2A merely for architectural breadth. Those mechanisms should be added when a real decomposition, process, or service boundary requires them.
+
+> **Independence note:** Controlled Autonomy Lab is an independent engineering and learning project. It is not an Anthropic project, official reference architecture, certification artifact, or Anthropic endorsement. The implementation, experiments, evaluators, methodology, and conclusions in this repository are my own.
+
 ## Case at a glance
 
 | Dimension | Scope |
