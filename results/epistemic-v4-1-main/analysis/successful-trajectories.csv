@@ -1,0 +1,71 @@
+provider,incident_id,pattern,model_calls,tool_calls,epistemic_verdict,trajectory
+openai,INC-001,augmented,1,0,overclaimed,load-evidence -> model-analysis
+openai,INC-001,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+openai,INC-001,routing,2,0,overclaimed,classify -> route:deployment -> model-analysis
+openai,INC-001,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+openai,INC-001,evaluator-optimizer,2,0,aligned,generate -> evaluate:1 -> quality-pass
+openai,INC-001,agent,2,5,aligned,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-002,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+openai,INC-002,routing,2,0,overclaimed,classify -> route:deployment -> model-analysis
+openai,INC-002,parallel,4,0,aligned,fan-out:3 -> fan-in -> aggregate
+openai,INC-002,evaluator-optimizer,2,0,aligned,generate -> evaluate:1 -> quality-pass
+openai,INC-002,agent,2,5,no-position,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-002,augmented,1,0,aligned,load-evidence -> model-analysis
+openai,INC-003,routing,2,0,overclaimed,classify -> route:dependency -> model-analysis
+openai,INC-003,parallel,4,0,no-position,fan-out:3 -> fan-in -> aggregate
+openai,INC-003,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+openai,INC-003,agent,2,5,over-hedged,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-003,augmented,1,0,aligned,load-evidence -> model-analysis
+openai,INC-003,chaining,3,0,aligned,extract-facts -> assess -> recommend
+openai,INC-004,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+openai,INC-004,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+openai,INC-004,agent,2,5,overclaimed,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+openai,INC-004,augmented,1,0,aligned,load-evidence -> model-analysis
+openai,INC-004,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+openai,INC-004,routing,2,0,overclaimed,classify -> route:performance -> model-analysis
+anthropic,INC-001,augmented,1,0,overclaimed,load-evidence -> model-analysis
+anthropic,INC-001,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+anthropic,INC-001,routing,2,0,overclaimed,classify -> route:deployment -> model-analysis
+anthropic,INC-001,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+anthropic,INC-001,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+anthropic,INC-001,agent,2,5,overclaimed,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-002,chaining,3,0,aligned,extract-facts -> assess -> recommend
+anthropic,INC-002,routing,2,0,overclaimed,classify -> route:deployment -> model-analysis
+anthropic,INC-002,parallel,4,0,aligned,fan-out:3 -> fan-in -> aggregate
+anthropic,INC-002,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+anthropic,INC-002,agent,2,5,aligned,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-002,augmented,1,0,aligned,load-evidence -> model-analysis
+anthropic,INC-003,routing,2,0,overclaimed,classify -> route:dependency -> model-analysis
+anthropic,INC-003,parallel,4,0,over-hedged,fan-out:3 -> fan-in -> aggregate
+anthropic,INC-003,evaluator-optimizer,2,0,aligned,generate -> evaluate:1 -> quality-pass
+anthropic,INC-003,agent,2,5,aligned,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-003,augmented,1,0,overclaimed,load-evidence -> model-analysis
+anthropic,INC-003,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+anthropic,INC-004,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+anthropic,INC-004,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+anthropic,INC-004,agent,2,5,overclaimed,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> get_previous_incidents -> final-answer
+anthropic,INC-004,augmented,1,0,overclaimed,load-evidence -> model-analysis
+anthropic,INC-004,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+anthropic,INC-004,routing,2,0,aligned,classify -> route:performance -> model-analysis
+groq,INC-001,augmented,1,0,overclaimed,load-evidence -> model-analysis
+groq,INC-001,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+groq,INC-001,routing,2,0,overclaimed,classify -> route:dependency -> model-analysis
+groq,INC-001,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+groq,INC-001,evaluator-optimizer,2,0,overclaimed,generate -> evaluate:1 -> quality-pass
+groq,INC-001,agent,5,4,overclaimed,get_service_metrics -> get_recent_deployments -> get_dependencies -> get_previous_incidents -> final-answer
+groq,INC-002,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+groq,INC-002,routing,2,0,overclaimed,classify -> route:deployment -> model-analysis
+groq,INC-002,evaluator-optimizer,4,0,over-hedged,generate -> evaluate:1 -> revise:1 -> evaluate:2 -> quality-pass
+groq,INC-002,agent,3,2,aligned,get_service_metrics -> get_recent_deployments -> final-answer
+groq,INC-002,augmented,1,0,no-position,load-evidence -> model-analysis
+groq,INC-003,routing,2,0,overclaimed,classify -> route:dependency -> model-analysis
+groq,INC-003,parallel,4,0,no-position,fan-out:3 -> fan-in -> aggregate
+groq,INC-003,agent,4,3,aligned,get_service_metrics -> get_recent_deployments -> get_dependencies -> final-answer
+groq,INC-003,augmented,1,0,aligned,load-evidence -> model-analysis
+groq,INC-003,chaining,3,0,aligned,extract-facts -> assess -> recommend
+groq,INC-004,parallel,4,0,overclaimed,fan-out:3 -> fan-in -> aggregate
+groq,INC-004,evaluator-optimizer,2,0,aligned,generate -> evaluate:1 -> quality-pass
+groq,INC-004,agent,5,4,no-position,get_service_metrics -> get_recent_deployments -> get_dependencies -> search_runbook -> final-answer
+groq,INC-004,augmented,1,0,no-position,load-evidence -> model-analysis
+groq,INC-004,chaining,3,0,overclaimed,extract-facts -> assess -> recommend
+groq,INC-004,routing,2,0,overclaimed,classify -> route:performance -> model-analysis
