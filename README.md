@@ -1,5 +1,11 @@
 # Controlled Autonomy Lab
 
+> **Language:** **English** · [Português (Brasil)](README.pt-BR.md)
+
+[![quality](https://github.com/brunovicco/controlled-autonomy-lab/actions/workflows/quality.yml/badge.svg)](https://github.com/brunovicco/controlled-autonomy-lab/actions/workflows/quality.yml)
+![Python](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+
 > Same control patterns. Different evidence postures. Multiple providers.
 
 Controlled Autonomy Lab is a small Python reference implementation for comparing six LLM application architectures across bounded production-incident fixtures with different evidence postures.
@@ -9,6 +15,36 @@ The central question is not whether agents are better than workflows. It is:
 > **Who owns the next step: deterministic application code or the model?**
 
 The lab makes that delegation boundary observable through execution topology, tool use, latency, token usage, deterministic grounding, claim-level evaluation, causal-authority checks, and selective semantic judgement.
+
+## Case at a glance
+
+| Dimension | Scope |
+| --- | --- |
+| Control patterns | 6 — augmented, chaining, routing, parallel, evaluator-optimizer, bounded agent |
+| Provider bundles | OpenAI, Anthropic, Groq |
+| Frozen experimental record | 90 repeated executions + 72 breadth attempts + 72 epistemic attempts |
+| Evaluation layers | Grounding v1, Epistemic v4.1, Claim Evaluation v2, selective semantic escalation |
+| Agent authority | 5 read-only tools, max 6 steps, max 8 tool calls, no production writes |
+| Reproducibility | frozen commits, metadata-only evidence packs, SHA-256 checksums, no hidden retries |
+
+Across the three separate frozen generations, the repository records **234 executions/attempted cells**. They are intentionally kept as separate generations and are **not** pooled as one statistical sample.
+
+```mermaid
+flowchart LR
+    A[Augmented] --> B[Chaining]
+    B --> C[Routing]
+    C --> D[Parallel]
+    D --> E[Evaluator-optimizer]
+    E --> F[Bounded agent]
+    A -. application owns path .-> E
+    F -. model owns next step within bounds .-> F
+```
+
+Three findings motivate the case:
+
+- **grounding is not the same as causal discipline**;
+- **provider/model behavior can become control-plane behavior** when a model selects the next step;
+- **bounded autonomy is not unrestricted authority** — the agent can gather evidence dynamically while deterministic code retains hard execution limits.
 
 ## What this case demonstrates
 
@@ -449,6 +485,9 @@ If a later phase moves the semantic judge, evidence provider, or another agent t
 - [`docs/MULTI_INCIDENT_FIXTURES.md`](docs/MULTI_INCIDENT_FIXTURES.md) — contrasting incident fixtures
 - [`docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md`](docs/MULTI_INCIDENT_BREADTH_BENCHMARK.md) — breadth experiment design and freeze
 - [`docs/MULTI_INCIDENT_BREADTH_RESULTS.md`](docs/MULTI_INCIDENT_BREADTH_RESULTS.md) — frozen 72-cell breadth analysis
+- [`docs/EPISTEMIC_EVALUATION.md`](docs/EPISTEMIC_EVALUATION.md) — deterministic evidence-posture and causal-authority evaluation
+- [`docs/EPISTEMIC_BENCHMARK_GENERATION_V2.md`](docs/EPISTEMIC_BENCHMARK_GENERATION_V2.md) — Epistemic v4.1 generation protocol and freeze boundary
+- [`docs/EPISTEMIC_GENERATION_V2_RESULTS.md`](docs/EPISTEMIC_GENERATION_V2_RESULTS.md) — frozen 72-cell epistemic generation analysis
 - [`docs/GROUNDING.md`](docs/GROUNDING.md) — deterministic Grounding v1
 - [`docs/CLAIM_EVALUATION.md`](docs/CLAIM_EVALUATION.md) — deterministic Claim Evaluation v2
 - [`docs/CLAIM_JUDGE_MATRIX.md`](docs/CLAIM_JUDGE_MATRIX.md) — labelled deterministic/judge matrix
@@ -456,6 +495,10 @@ If a later phase moves the semantic judge, evidence provider, or another agent t
 - [`docs/SEMANTIC_JUDGE_DECOUPLING.md`](docs/SEMANTIC_JUDGE_DECOUPLING.md) — independent judge v2.2
 - [`docs/PROVIDERS.md`](docs/PROVIDERS.md) — provider configuration and references
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — development workflow
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
 
 ## References
 
