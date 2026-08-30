@@ -266,18 +266,12 @@ It does not intentionally persist:
 
 ---
 
-# Next step
+# Published evidence pack
 
-The next publication step is a curated metadata-only evidence pack containing:
+The curated metadata-only evidence pack is published at:
 
-1. the three provider generation manifests;
-2. all 72 metadata-only benchmark records;
-3. canonical consolidated cells;
-4. availability summaries;
-5. incident/pattern/provider epistemic summaries;
-6. Grounding v1 × Epistemic v4.1 comparison tables;
-7. trajectory metadata;
-8. recursive persistence-safety validation;
-9. SHA-256 checksums.
+[`results/epistemic-v4-1-main/`](../results/epistemic-v4-1-main/)
 
-The evidence pack must be derived from the frozen local generation outputs without rerunning any model calls.
+It contains the three provider generation manifests, all 72 metadata-only benchmark records, canonical consolidated cells, provider/incident/pattern summaries, successful trajectory metadata, a generation manifest, and SHA-256 checksums.
+
+The pack was built offline from the frozen provider outputs. No model calls were rerun to create the publication artifacts.
