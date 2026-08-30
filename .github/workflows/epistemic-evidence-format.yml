@@ -5,8 +5,11 @@ on:
     branches:
       - docs/epistemic-v2-evidence
 
+permissions:
+  contents: write
+
 jobs:
-  format-diff:
+  format-builder:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -15,6 +18,18 @@ jobs:
           version: "0.11.28"
       - run: uv python install
       - run: uv sync --frozen --all-groups
-      - name: Ruff formatter diff
-        run: uv run ruff format --diff scripts/build_epistemic_v2_evidence_pack.py
-        continue-on-error: true
+      - name: Fix builder lint and format
+        run: |
+          uv run ruff check --fix --unsafe-fixes scripts/build_epistemic_v2_evidence_pack.py
+          uv run ruff format scripts/build_epistemic_v2_evidence_pack.py
+      - name: Commit formatter changes
+        run: |
+          if git diff --quiet -- scripts/build_epistemic_v2_evidence_pack.py; then
+            echo "No formatter changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/build_epistemic_v2_evidence_pack.py
+          git commit -m "style: format epistemic evidence builder"
+          git push origin HEAD:docs/epistemic-v2-evidence
