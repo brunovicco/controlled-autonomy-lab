@@ -332,14 +332,13 @@ def _median(rows: Sequence[Mapping[str, Any]], key: str) -> float | None:
     return median(values) if values else None
 
 
-def _summary_row(label: str, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _summary_row(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     successful = [row for row in rows if row.get("status") == "ok"]
     statuses = Counter(str(row["status"]) for row in rows)
     verdicts = Counter(str(row["epistemic_verdict"]) for row in successful)
     aligned = verdicts.get("aligned", 0)
     overclaimed = verdicts.get("overclaimed", 0)
     return {
-        "group": label,
         "attempted": len(rows),
         "ok": statuses.get("ok", 0),
         "rate_limited": statuses.get("rate_limited", 0),
@@ -380,7 +379,7 @@ def _group_rows(
 
     result: list[dict[str, Any]] = []
     for key, group in sorted(grouped.items()):
-        summary = _summary_row(" / ".join(key), group)
+        summary = _summary_row(group)
         for name, value in zip(key_names, key, strict=True):
             summary[name] = value
         result.append(summary)
