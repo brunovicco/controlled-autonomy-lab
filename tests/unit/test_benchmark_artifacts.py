@@ -8,11 +8,16 @@ import pytest
 from autonomy_lab.adapters.benchmark_artifacts import write_benchmark_artifacts
 from autonomy_lab.domain.autonomy import AutonomyPattern
 from autonomy_lab.domain.benchmark import (
+    BENCHMARK_RECORD_SCHEMA_VERSION,
+    BENCHMARK_SUMMARY_SCHEMA_VERSION,
+    EPISTEMIC_EVALUATION_VERSION,
+    GROUNDING_EVALUATION_VERSION,
     BenchmarkConfig,
     BenchmarkRecord,
     BenchmarkStatus,
     PatternBenchmarkSummary,
 )
+from autonomy_lab.domain.epistemic import EpistemicVerdict, EvidencePosture
 
 
 def _config() -> BenchmarkConfig:
@@ -25,6 +30,7 @@ def _config() -> BenchmarkConfig:
         timeout_seconds=30.0,
         run_interval_seconds=2.0,
         git_commit="abc123",
+        epistemic_evaluation_version=EPISTEMIC_EVALUATION_VERSION,
     )
 
 
@@ -42,6 +48,7 @@ def _record() -> BenchmarkRecord:
         pattern=AutonomyPattern.AGENT,
         run_number=1,
         status=BenchmarkStatus.OK,
+        epistemic_evaluation_version=EPISTEMIC_EVALUATION_VERSION,
         model_calls=5,
         tool_calls=4,
         input_tokens=2804,
@@ -52,6 +59,13 @@ def _record() -> BenchmarkRecord:
         causality_overclaims=0,
         grounding_ratio=0.846,
         uncertainty_preserved=True,
+        epistemic_expected_posture=EvidencePosture.CORRELATIONAL,
+        epistemic_verdict=EpistemicVerdict.ALIGNED,
+        epistemic_aligned=True,
+        causal_assertion_detected=False,
+        hedged_causal_language_detected=True,
+        abstention_detected=True,
+        uncertainty_language_detected=True,
         trajectory=("get_service_metrics", "final-answer"),
     )
 
@@ -78,7 +92,14 @@ def _summary() -> PatternBenchmarkSummary:
         mean_grounding_ratio=0.846,
         uncertainty_preservation_rate=1.0,
         unique_trajectories=1,
+        epistemic_evaluated=1,
+        epistemic_aligned=1,
+        epistemic_alignment_rate=1.0,
     )
+
+
+def _markdown_row(*cells: str) -> str:
+    return f"| {' | '.join(cells)} |"
 
 
 def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
@@ -90,8 +111,14 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
     )
 
     payload = json.loads(artifacts.runs_jsonl.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == BENCHMARK_RECORD_SCHEMA_VERSION
+    assert payload["grounding_evaluation_version"] == GROUNDING_EVALUATION_VERSION
+    assert payload["epistemic_evaluation_version"] == EPISTEMIC_EVALUATION_VERSION
     assert payload["pattern"] == "agent"
     assert payload["grounding_ratio"] == 0.846
+    assert payload["epistemic_expected_posture"] == "correlational"
+    assert payload["epistemic_verdict"] == "aligned"
+    assert payload["epistemic_aligned"] is True
     assert payload["trajectory"] == ["get_service_metrics", "final-answer"]
     assert "answer" not in payload
     assert "prompt" not in payload
@@ -99,17 +126,23 @@ def test_benchmark_artifacts_are_metadata_only(tmp_path: Path) -> None:
 
     with artifacts.summary_csv.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
+    assert rows[0]["schema_version"] == BENCHMARK_SUMMARY_SCHEMA_VERSION
+    assert rows[0]["epistemic_evaluation_version"] == EPISTEMIC_EVALUATION_VERSION
     assert rows[0]["pattern"] == "agent"
     assert rows[0]["completed"] == "1"
     assert rows[0]["max_tokens"] == "900"
     assert rows[0]["timeout_seconds"] == "30.0"
     assert rows[0]["benchmark_status"] == "complete"
+    assert rows[0]["epistemic_evaluated"] == "1"
+    assert rows[0]["epistemic_alignment_rate"] == "1.000000"
 
     markdown = artifacts.summary_markdown.read_text(encoding="utf-8")
     assert "# Reproducible Benchmark Summary" in markdown
+    assert "Epistemic evaluator: `epistemic-v4.1`" in markdown
     assert "only. It does not serialize" in markdown
     assert "Provider errors" in markdown
     assert "| agent | 1/1 | 5.0 | 4.0 | 3965 |" in markdown
+    assert "| 84.6% | 100.0% | 0 | 0 | 0 | 0 |" in markdown
     assert "parallel fan-out remains concurrent" in markdown
 
 
@@ -127,6 +160,13 @@ def test_partial_summary_surfaces_rate_limit_context(tmp_path: Path) -> None:
         causality_overclaims=None,
         grounding_ratio=None,
         uncertainty_preserved=None,
+        epistemic_expected_posture=None,
+        epistemic_verdict=None,
+        epistemic_aligned=None,
+        causal_assertion_detected=None,
+        hedged_causal_language_detected=None,
+        abstention_detected=None,
+        uncertainty_language_detected=None,
         trajectory=(),
         retry_after="2",
         error="Groq API returned HTTP 429",
@@ -148,6 +188,9 @@ def test_partial_summary_surfaces_rate_limit_context(tmp_path: Path) -> None:
         mean_causality_overclaims=None,
         mean_grounding_ratio=None,
         uncertainty_preservation_rate=None,
+        epistemic_evaluated=0,
+        epistemic_aligned=0,
+        epistemic_alignment_rate=None,
         unique_trajectories=0,
     )
 
@@ -158,11 +201,33 @@ def test_partial_summary_surfaces_rate_limit_context(tmp_path: Path) -> None:
         summaries=(summary,),
     )
 
+    payload = json.loads(artifacts.runs_jsonl.read_text(encoding="utf-8"))
+    assert payload["epistemic_evaluation_version"] == EPISTEMIC_EVALUATION_VERSION
+    assert payload["epistemic_verdict"] is None
+
     markdown = artifacts.summary_markdown.read_text(encoding="utf-8")
     assert "Benchmark status: `partial`" in markdown
     assert "Rate limits occurred in this experiment." in markdown
     assert "increase the attempt interval" in markdown
-    assert "| agent | 0/1 | - | - | - | - | - | - | - | - | 100.0% | 0.0% | 0 |" in markdown
+    expected_row = _markdown_row(
+        "agent",
+        "0/1",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0",
+        "0",
+        "0",
+        "0",
+        "100.0%",
+        "0.0%",
+        "0.0%",
+        "0",
+    )
+    assert expected_row in markdown
 
 
 def test_partial_summary_surfaces_provider_error_context(tmp_path: Path) -> None:
@@ -179,6 +244,13 @@ def test_partial_summary_surfaces_provider_error_context(tmp_path: Path) -> None
         causality_overclaims=None,
         grounding_ratio=None,
         uncertainty_preserved=None,
+        epistemic_expected_posture=None,
+        epistemic_verdict=None,
+        epistemic_aligned=None,
+        causal_assertion_detected=None,
+        hedged_causal_language_detected=None,
+        abstention_detected=None,
+        uncertainty_language_detected=None,
         trajectory=(),
         error=(
             "OpenAI API returned HTTP 400: type=invalid_request_error; "
@@ -202,6 +274,9 @@ def test_partial_summary_surfaces_provider_error_context(tmp_path: Path) -> None
         mean_causality_overclaims=None,
         mean_grounding_ratio=None,
         uncertainty_preservation_rate=None,
+        epistemic_evaluated=0,
+        epistemic_aligned=0,
+        epistemic_alignment_rate=None,
         unique_trajectories=0,
     )
 
@@ -216,7 +291,25 @@ def test_partial_summary_surfaces_provider_error_context(tmp_path: Path) -> None
     assert "Benchmark status: `partial`" in markdown
     assert "Provider errors occurred in this experiment." in markdown
     assert "raw provider response bodies are not persisted" in markdown
-    assert "| agent | 0/1 | - | - | - | - | - | - | - | - | 0.0% | 100.0% | 0 |" in markdown
+    expected_row = _markdown_row(
+        "agent",
+        "0/1",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0.0%",
+        "100.0%",
+        "0.0%",
+        "0",
+    )
+    assert expected_row in markdown
 
 
 def test_benchmark_artifacts_require_explicit_overwrite(tmp_path: Path) -> None:
