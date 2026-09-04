@@ -10,8 +10,8 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-governed-llm-gateway-client = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "ec18ad8e95490fdeb6ee4c6b9e26ae7cd5b1b0b1", subdirectory = "packages/gateway-client" }
-governed-llm-gateway-contracts = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "ec18ad8e95490fdeb6ee4c6b9e26ae7cd5b1b0b1", subdirectory = "packages/gateway-contracts" }
+governed-llm-gateway-client = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "dfcc937e033aa92aa4ac063d47a395ea63355439", subdirectory = "packages/gateway-client" }
+governed-llm-gateway-contracts = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "dfcc937e033aa92aa4ac063d47a395ea63355439", subdirectory = "packages/gateway-contracts" }
 
 [project.scripts]
 autonomy-lab = "autonomy_lab.cli:main"
