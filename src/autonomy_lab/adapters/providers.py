@@ -5,11 +5,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from autonomy_lab.adapters.anthropic import AnthropicMessagesClient
+from autonomy_lab.adapters.governed_gateway import gateway_client_from_env
 from autonomy_lab.adapters.openai_compatible import OpenAICompatibleChatClient
 from autonomy_lab.adapters.openai_responses import OpenAIResponsesClient
 from autonomy_lab.application.model_ports import ModelClient
 
-_SUPPORTED = ("anthropic", "openai", "groq", "openrouter", "custom")
+_SUPPORTED = ("anthropic", "openai", "groq", "openrouter", "custom", "gateway")
 _MODEL_SETTINGS = {
     "anthropic": ("CLAUDE_MODEL", "claude-sonnet-5"),
     "openai": ("OPENAI_MODEL", "gpt-5.6-luna"),
@@ -59,6 +60,18 @@ def configured_client_from_env(
         30.0,
         namespace=namespace,
     )
+
+    if provider == "gateway":
+        client, gateway = gateway_client_from_env(settings, namespace=namespace)
+        return (
+            client,
+            ProviderSelection(
+                provider="gateway",
+                model=f"policy-routed:{gateway.workload}",
+                max_tokens=gateway.max_tokens,
+                timeout_seconds=gateway.timeout_seconds,
+            ),
+        )
 
     if provider == "custom":
         model = _required(settings, "OPENAI_COMPAT_MODEL", provider, namespace=namespace)
