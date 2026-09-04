@@ -33,8 +33,8 @@ class GatewaySelection:
 class GovernedGatewayClient:
     """Synchronous lab adapter over the thin async gateway SDK.
 
-    A fresh SDK client is created for each bounded lab call so its httpx connection pool never crosses
-    event-loop boundaries. Retry and provider fallback remain exclusively server-side.
+    A fresh SDK client is created for each bounded lab call so its httpx connection pool
+    never crosses event-loop boundaries. Retry and provider fallback remain server-side.
     """
 
     def __init__(self, selection: GatewaySelection) -> None:
@@ -62,9 +62,15 @@ class GovernedGatewayClient:
                     max_output_tokens=self._selection.max_tokens,
                     provider_timeout_seconds=self._selection.timeout_seconds,
                 ):
-                    if event.event_type is StreamEventType.CONTENT_DELTA and event.delta is not None:
+                    if (
+                        event.event_type is StreamEventType.CONTENT_DELTA
+                        and event.delta is not None
+                    ):
                         text_parts.append(event.delta)
-                    elif event.event_type is StreamEventType.USAGE_COMPLETED and event.usage is not None:
+                    elif (
+                        event.event_type is StreamEventType.USAGE_COMPLETED
+                        and event.usage is not None
+                    ):
                         usage = ModelUsage(
                             input_tokens=event.usage.input_tokens,
                             output_tokens=event.usage.output_tokens,
@@ -83,7 +89,9 @@ class GovernedGatewayClient:
                 f"governed gateway rejected the request: status={exc.status_code} code={exc.code}"
             ) from None
         except GatewayClientError as exc:
-            raise ModelProviderError(f"governed gateway client failure: {type(exc).__name__}") from None
+            raise ModelProviderError(
+                f"governed gateway client failure: {type(exc).__name__}"
+            ) from None
 
         text = "".join(text_parts)
         if not text:
@@ -159,9 +167,7 @@ def _required(settings: Mapping[str, str], name: str, *, namespace: str) -> str:
     return value
 
 
-def _enum_setting[
-    T: (RiskLevel, DataClassification)
-](
+def _enum_setting[T: (RiskLevel, DataClassification)](
     settings: Mapping[str, str],
     name: str,
     enum_type: type[T],
