@@ -1,4 +1,6 @@
-from types import SimpleNamespace
+from collections.abc import AsyncIterator, Sequence
+from types import SimpleNamespace, TracebackType
+from typing import Any, Self, cast
 
 import pytest
 from governed_llm_gateway_client import GatewayClient
@@ -16,7 +18,7 @@ def test_gateway_provider_requires_explicit_workload() -> None:
 
 
 def test_gateway_provider_exposes_policy_routed_identity_without_provider_key() -> None:
-    client, selection = configured_client_from_env(
+    _, provider_selection = configured_client_from_env(
         {
             "LLM_PROVIDER": "gateway",
             "GATEWAY_WORKLOAD": "incident.analysis",
@@ -26,13 +28,22 @@ def test_gateway_provider_exposes_policy_routed_identity_without_provider_key() 
             "LLM_TIMEOUT_SECONDS": "12.5",
         }
     )
+    _, gateway_selection = gateway_client_from_env(
+        {
+            "GATEWAY_WORKLOAD": "incident.analysis",
+            "GATEWAY_RISK_LEVEL": "medium",
+            "GATEWAY_DATA_CLASSIFICATION": "internal",
+            "LLM_MAX_TOKENS": "900",
+            "LLM_TIMEOUT_SECONDS": "12.5",
+        }
+    )
 
-    assert selection.provider == "gateway"
-    assert selection.model == "policy-routed:incident.analysis"
-    assert selection.max_tokens == 900
-    assert selection.timeout_seconds == 12.5
-    assert client._selection.risk_level is RiskLevel.MEDIUM
-    assert client._selection.data_classification is DataClassification.INTERNAL
+    assert provider_selection.provider == "gateway"
+    assert provider_selection.model == "policy-routed:incident.analysis"
+    assert provider_selection.max_tokens == 900
+    assert provider_selection.timeout_seconds == 12.5
+    assert gateway_selection.risk_level is RiskLevel.MEDIUM
+    assert gateway_selection.data_classification is DataClassification.INTERNAL
 
 
 def test_gateway_provider_rejects_unknown_controlled_vocabulary() -> None:
@@ -56,17 +67,24 @@ def test_gateway_agent_continuation_fails_closed() -> None:
         )
 
 
-def test_gateway_complete_maps_text_usage_and_finish_reason(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gateway_complete_maps_text_usage_and_finish_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     observed: dict[str, object] = {}
 
     class FakeGateway:
-        async def __aenter__(self):
+        async def __aenter__(self) -> Self:
             return self
 
-        async def __aexit__(self, exc_type, exc, traceback):
-            return None
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            traceback: TracebackType | None,
+        ) -> None:
+            del exc_type, exc, traceback
 
-        async def stream(self, **kwargs):
+        async def stream(self, **kwargs: Any) -> AsyncIterator[Any]:
             observed.update(kwargs)
             yield SimpleNamespace(
                 event_type=StreamEventType.CONTENT_DELTA,
@@ -119,18 +137,23 @@ def test_gateway_complete_maps_text_usage_and_finish_reason(monkeypatch: pytest.
     assert observed["data_classification"] is DataClassification.PUBLIC
     assert observed["max_output_tokens"] == 500
     assert observed["provider_timeout_seconds"] == 9.0
-    assert len(observed["messages"]) == 2
+    assert len(cast(Sequence[object], observed["messages"])) == 2
 
 
 def test_gateway_complete_rejects_empty_success(monkeypatch: pytest.MonkeyPatch) -> None:
     class EmptyGateway:
-        async def __aenter__(self):
+        async def __aenter__(self) -> Self:
             return self
 
-        async def __aexit__(self, exc_type, exc, traceback):
-            return None
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            traceback: TracebackType | None,
+        ) -> None:
+            del exc_type, exc, traceback
 
-        async def stream(self, **kwargs):
+        async def stream(self, **kwargs: Any) -> AsyncIterator[Any]:
             del kwargs
             yield SimpleNamespace(
                 event_type=StreamEventType.RESPONSE_COMPLETED,
