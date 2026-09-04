@@ -185,8 +185,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "governed-llm-gateway-client", git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-client&rev=dfcc937e033aa92aa4ac063d47a395ea63355439" },
-    { name = "governed-llm-gateway-contracts", git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-contracts&rev=dfcc937e033aa92aa4ac063d47a395ea63355439" },
+    { name = "governed-llm-gateway-client", git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-client&rev=96b09956e933db50bf9ea900973f8a0b2145cb3c" },
+    { name = "governed-llm-gateway-contracts", git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-contracts&rev=96b09956e933db50bf9ea900973f8a0b2145cb3c" },
 ]
 
 [package.metadata.requires-dev]
@@ -289,7 +289,7 @@ wheels = [
 [[package]]
 name = "governed-llm-gateway-client"
 version = "0.2.0"
-source = { git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-client&rev=dfcc937e033aa92aa4ac063d47a395ea63355439#dfcc937e033aa92aa4ac063d47a395ea63355439" }
+source = { git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-client&rev=96b09956e933db50bf9ea900973f8a0b2145cb3c#96b09956e933db50bf9ea900973f8a0b2145cb3c" }
 dependencies = [
     { name = "governed-llm-gateway-contracts" },
     { name = "httpx" },
@@ -298,7 +298,7 @@ dependencies = [
 [[package]]
 name = "governed-llm-gateway-contracts"
 version = "0.1.0"
-source = { git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-contracts&rev=dfcc937e033aa92aa4ac063d47a395ea63355439#dfcc937e033aa92aa4ac063d47a395ea63355439" }
+source = { git = "https://github.com/brunovicco/governed-llm-gateway.git?subdirectory=packages%2Fgateway-contracts&rev=96b09956e933db50bf9ea900973f8a0b2145cb3c#96b09956e933db50bf9ea900973f8a0b2145cb3c" }
 
 [[package]]
 name = "h11"
