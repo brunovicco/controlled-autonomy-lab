@@ -4,7 +4,14 @@ version = "0.2.0"
 description = "Compare increasing levels of LLM autonomy on the same incident-analysis task"
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
-dependencies = []
+dependencies = [
+    "governed-llm-gateway-client",
+    "governed-llm-gateway-contracts",
+]
+
+[tool.uv.sources]
+governed-llm-gateway-client = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "ec18ad8e95490fdeb6ee4c6b9e26ae7cd5b1b0b1", subdirectory = "packages/gateway-client" }
+governed-llm-gateway-contracts = { git = "https://github.com/brunovicco/governed-llm-gateway.git", rev = "ec18ad8e95490fdeb6ee4c6b9e26ae7cd5b1b0b1", subdirectory = "packages/gateway-contracts" }
 
 [project.scripts]
 autonomy-lab = "autonomy_lab.cli:main"
